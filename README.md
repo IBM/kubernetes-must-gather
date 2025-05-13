@@ -2,6 +2,18 @@
 
 Custom must-gather image and collection script for Kubernetes and OpenShift.
 
+## Development
+
+1. Build the image. For example:  
+   ```
+   podman build -t must-gather-custom-image -f Containerfile .
+   ```
+1. Push the image to some registry.
+1. Use the image. For example:
+   ```
+   oc adm must-gather --image=image-registry.openshift-image-registry.svc:5000/testNamespace/testImage:20250513
+   ```
+
 ## Files
 
 * [LICENSE](LICENSE)
