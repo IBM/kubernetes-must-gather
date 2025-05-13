@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Copyright IBM Corporation. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Store PIDs of all the subprocesses
+pids=()
+
+# resource groups list
+group_resources=()
+group_resources+=(nodes pods events)
+
+filtered_group_resources=()
+for gr in "${group_resources[@]}"
+do
+   oc get "$gr" > /dev/null 2>&1
+   if [[ "$?" -eq 0 ]]; then
+    filtered_group_resources+=("$gr")
+  fi
+done
+
+group_resources_text=$(IFS=, ; echo "${filtered_group_resources[*]}")
+oc adm inspect --dest-dir must-gather --rotated-pod-logs "${group_resources_text}" --all-namespaces &
+pids+=($!)
+
+# Check if PID array has any values, if so, wait for them to finish
+if [ ${#pids[@]} -ne 0 ]; then
+    echo "Waiting on subprocesses to finish execution."
+    wait "${pids[@]}"
+fi
+
+# force disk flush to ensure that all data gathered is accessible in the copy container
+sync
