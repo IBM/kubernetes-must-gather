@@ -26,6 +26,45 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250528005 --
 
 ## Development
 
+### Steps to build locally and publish to an OpenShift registry
+
+1. Build the image for your cluster platform:
+   ```
+   podman build --platform linux/amd64 -t kubernetes-must-gather .
+   ```
+1. Get your cluster registry:
+   ```
+   REGISTRY=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
+   ```
+1. Find the local image ID:
+   ```
+   IMAGE_ID=$(podman images | grep "localhost/kubernetes-must-gather" | awk '{print $3}')
+   ```
+1. Set a version of the image:
+   ```
+   VERSION="20250528001"
+   ```
+1. Set the namespace to push the image to:
+   ```
+   NAMESPACE="customimages"
+   ```
+1. Login to your remote image registry with podman:
+   ```
+   podman login ${REGISTRY}
+   ```
+1. Tag the local image for the remote image registry:
+   ```
+   podman tag ${IMAGE_ID} ${REGISTRY}/${NAMESPACE}/kubernetes-must-gather:${VERSION}
+   ```
+1. Push the image to the remote image registry:
+   ```
+   podman push ${IMAGE_ID} ${REGISTRY}/${NAMESPACE}/kubernetes-must-gather:${VERSION}
+   ```
+1. Use the image. For example:
+   ```
+   oc adm must-gather --image=image-registry.openshift-image-registry.svc:5000/${NAMESPACE}/kubernetes-must-gather:${VERSION}
+   ```
+
 ### Steps to publish a new image to Quay
 
 1. Update the `VERSION=` line in `gather`
