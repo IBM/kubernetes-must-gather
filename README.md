@@ -32,7 +32,7 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250528006 --
    ```
    podman build --platform linux/amd64 -t kubernetes-must-gather .
    ```
-1. Get your cluster registry:
+1. Get your cluster registry URL:
    ```
    REGISTRY=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
    ```
