@@ -86,7 +86,7 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250528005 --
    ```
 1. Build the images:
    ```
-   podman build --platform linux/amd64 --jobs=1 --manifest quay.io/ibm/kubernetes-must-gather:latest .
+   podman build --platform linux/amd64,linux/ppc64le,linux/s390x,linux/arm64 --jobs=1 --manifest quay.io/ibm/kubernetes-must-gather:latest .
    ```
 1. Check that the manifest looks good:
    ```
