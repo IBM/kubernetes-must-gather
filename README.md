@@ -28,7 +28,7 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250528006 --
 
 ### Steps to build locally and publish to an OpenShift registry
 
-1. Build the image for your cluster platform:
+1. Build the image for your cluster platform; for example:
    ```
    podman build --platform linux/amd64 -t kubernetes-must-gather .
    ```
