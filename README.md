@@ -56,7 +56,7 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250528006 --
    ```
    podman tag ${IMAGE_ID} ${REGISTRY}/${NAMESPACE}/kubernetes-must-gather:${VERSION}
    ```
-1. Push the image to the remote image registry:
+1. Push the image to the remote image registry (may require [exposing the registry](https://docs.openshift.com/container-platform/latest/registry/securing-exposing-registry.html)):
    ```
    podman push ${IMAGE_ID} ${REGISTRY}/${NAMESPACE}/kubernetes-must-gather:${VERSION}
    ```
