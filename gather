@@ -1,20 +1,47 @@
 #!/bin/bash
-
 # Copyright IBM Corporation. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
+# Assisted by watsonx Code Assistant
+
+PROJECT_NAME="kubernetes-must-gather"
+TOOL_NAME="gather"
+VERSION="0.1.20250528003"
+echo "[$(date)] ${PROJECT_NAME} Version ${VERSION}"
+
+POSITIONAL_ARGS=()
+COLLECT_LOGS=false
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -c|--logs-crashloopbackoff)
+      COLLECT_LOGS=true
+      echo "[$(date)] Collecting CrashLoopBackoff logs."
+      shift # past argument
+      ;;
+    -*|--*)
+      echo "Unknown option $1"
+      exit 1
+      ;;
+    *)
+      POSITIONAL_ARGS+=("$1") # save positional arg
+      shift # past argument
+      ;;
+  esac
+done
+
+set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
 
 # Store PIDs of all the subprocesses
 pids=()
 
 # resource groups list
-group_resources=()
-group_resources+=(nodes pods events)
+group_resources=(nodes pods events securitycontextconstraints)
 
 filtered_group_resources=()
 for gr in "${group_resources[@]}"
 do
-   oc get "$gr" > /dev/null 2>&1
-   if [[ "$?" -eq 0 ]]; then
+  oc get "$gr" > /dev/null 2>&1
+  if [[ "$?" -eq 0 ]]; then
     filtered_group_resources+=("$gr")
   fi
 done
@@ -23,10 +50,28 @@ group_resources_text=$(IFS=, ; echo "${filtered_group_resources[*]}")
 oc adm inspect --dest-dir must-gather --rotated-pod-logs "${group_resources_text}" --all-namespaces &
 pids+=($!)
 
+if [ "${COLLECT_LOGS}" = true ]; then
+  OUTDIR="/must-gather/crashloop-logs"
+  echo "[$(date)] Checking for CrashLoopBackOff pods"
+  oc get pods -A -o json | \
+    jq -r '.items[] | select(.status.containerStatuses[]?.state.waiting?.reason == "CrashLoopBackOff") | [.metadata.namespace, .metadata.name] | @tsv' | \
+      while IFS=$'\t' read -r ns pod; do
+        containers=$(oc get pod "$pod" -n "$ns" -o jsonpath='{.spec.containers[*].name}')
+        for container in $containers; do
+          echo "[$(date)] Collecting logs for $ns/$pod [$container]"
+          mkdir -p "$OUTDIR/$ns/$pod"
+          oc logs "$pod" -c "$container" -n "$ns" > "$OUTDIR/$ns/$pod/$container.log" \
+            2>>"$OUTDIR/error.log" || echo "Failed for $ns/$pod/$container"
+          oc logs "$pod" -c "$container" --previous -n "$ns" > "$OUTDIR/$ns/$pod/$container.log_previous" \
+            2>>"$OUTDIR/error.log" || echo "Failed for $ns/$pod/$container"
+        done
+      done
+fi
+
 # Check if PID array has any values, if so, wait for them to finish
 if [ ${#pids[@]} -ne 0 ]; then
-    echo "Waiting on subprocesses to finish execution."
-    wait "${pids[@]}"
+  echo "[$(date)] Waiting on subprocesses to finish execution."
+  wait "${pids[@]}"
 fi
 
 # force disk flush to ensure that all data gathered is accessible in the copy container
