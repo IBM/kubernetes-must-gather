@@ -40,7 +40,7 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250528006 --
    ```
    IMAGE_ID=$(podman images | grep "localhost/kubernetes-must-gather" | awk '{print $3}')
    ```
-1. Set a version of the image:
+1. Set a unique version of the image:
    ```
    VERSION="20250528001"
    ```
