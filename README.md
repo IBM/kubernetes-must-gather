@@ -1,6 +1,6 @@
 # kubernetes-must-gather
 
-Custom must-gather image and collection script for Kubernetes and OpenShift.
+Custom must-gather image and collection script for Kubernetes and OpenShift. It should work on AMD/x64, ARM/AARCH, PPC64, and z/Linux.
 
 ## Usage
 
