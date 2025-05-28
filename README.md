@@ -2,17 +2,83 @@
 
 Custom must-gather image and collection script for Kubernetes and OpenShift.
 
+## Usage
+
+### Basic usage
+
+```
+oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250528004
+```
+
+### Customized usage
+
+#### Usage help
+
+```
+oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250528004 -- gather -h
+```
+
+#### Also gather current and previous pod logs of pods in CrashLoopBackOff state
+
+```
+oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250528004 -- gather --logs-crashloopbackoff
+```
+
 ## Development
 
-1. Build the image. For example:  
+### Steps to publish a new image to Quay
+
+1. Update the `VERSION=` line in `gather`
+1. Set a variable to this version in your shell:
    ```
-   podman build -t must-gather-custom-image -f Containerfile .
+   VERSION="..."
    ```
-1. Push the image to some registry.
-1. Use the image. For example:
+1. Create the manifest (error if it exists is okay):
    ```
-   oc adm must-gather --image=image-registry.openshift-image-registry.svc:5000/testNamespace/testImage:20250513
+   podman manifest create quay.io/ibm/kubernetes-must-gather:latest
    ```
+1. Remove any existing manifest images:
+   ```
+   for i in $(podman manifest inspect quay.io/ibm/kubernetes-must-gather:latest | jq '.manifests[].digest' | tr '\n' ' ' | sed 's/"//g'); do podman manifest remove quay.io/ibm/kubernetes-must-gather:latest $i; done
+   ```
+1. Check that the manifest has no images:
+   ```
+   podman manifest inspect quay.io/ibm/kubernetes-must-gather:latest
+   ```
+1. Build the images:
+   ```
+   podman build --platform linux/amd64 --jobs=1 --manifest quay.io/ibm/kubernetes-must-gather:latest .
+   ```
+1. Check that the manifest looks good:
+   ```
+   podman manifest inspect quay.io/ibm/kubernetes-must-gather:latest
+   ```
+1. Log into Quay:
+   ```
+   podman login quay.io
+   ```
+1. Push with the version in step 1:
+   ```
+   podman manifest push --all quay.io/ibm/kubernetes-must-gather:latest docker://quay.io/ibm/kubernetes-must-gather:$VERSION
+   ```
+1. Test the tag:
+    1. Make sure it basically works with usage:
+       ```
+       oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:$VERSION -- gather -h
+       ```
+    1. Run the default must gather:
+       ```
+       oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:$VERSION
+       ```
+1. If testing looks good, push to the `latest` tag:
+   ```
+   podman manifest push --all quay.io/ibm/kubernetes-must-gather:latest docker://quay.io/ibm/kubernetes-must-gather:latest
+   ```
+1. Test the `latest` tag:
+   ```
+   oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest
+   ```
+1. If all looks good, update the version above in the README.
 
 ## Files
 

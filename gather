@@ -5,8 +5,16 @@
 
 PROJECT_NAME="kubernetes-must-gather"
 TOOL_NAME="gather"
-VERSION="0.1.20250528003"
+VERSION="0.1.20250528005"
 echo "[$(date)] ${PROJECT_NAME} Version ${VERSION}"
+
+usage() {
+  printf "Usage: %s [-c|--logs-crashloopbackoff]\n" "$(basename "${0}")"
+  cat <<"EOF"
+               -c|--logs-crashloopbackoff: Gather current and previous pod logs of pods in CrashLoopBackOff state
+EOF
+  exit 22
+}
 
 POSITIONAL_ARGS=()
 COLLECT_LOGS=false
@@ -15,8 +23,11 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     -c|--logs-crashloopbackoff)
       COLLECT_LOGS=true
-      echo "[$(date)] Collecting CrashLoopBackoff logs."
+      echo "[$(date)] Collecting CrashLoopBackOff logs."
       shift # past argument
+      ;;
+    -h|--help|--usage)
+      usage
       ;;
     -*|--*)
       echo "Unknown option $1"
