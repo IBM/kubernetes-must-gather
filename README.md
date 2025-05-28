@@ -44,7 +44,7 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250528005 --
    ```
    VERSION="20250528001"
    ```
-1. Set the namespace to push the image to:
+1. Set the namespace to push the image to (make sure this namespace exists):
    ```
    NAMESPACE="customimages"
    ```
