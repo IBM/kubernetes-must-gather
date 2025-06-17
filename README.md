@@ -7,7 +7,7 @@ Custom must-gather image and collection script for Kubernetes and OpenShift. It 
 ### Basic usage
 
 ```
-oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250528006
+oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250617026
 ```
 
 ### Customized usage
@@ -15,13 +15,13 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250528006
 #### Usage help
 
 ```
-oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250528006 -- gather -h
+oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250617026 -- gather -h
 ```
 
 #### Also gather current and previous pod logs of pods in CrashLoopBackOff state
 
 ```
-oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250528006 -- gather --logs-crashloopbackoff
+oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250617026 -- gather --logs-crashloopbackoff
 ```
 
 ## Development

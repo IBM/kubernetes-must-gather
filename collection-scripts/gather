@@ -5,7 +5,7 @@
 
 SCRIPT_NAME="kubernetes-must-gather"
 TOOL_NAME="gather"
-VERSION="0.1.20250617025"
+VERSION="0.1.20250617026"
 MGOUTPUT="must-gather"
 LOGS_CRASHLOOPBACKOFF=false
 VERBOSE=false

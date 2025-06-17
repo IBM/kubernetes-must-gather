@@ -9,5 +9,5 @@ RUN yum install -y jq && \
     tar -xvzf openshift-client-linux*.tar.gz -C /usr/local/bin oc && \
     rm -f openshift-client-linux*.tar.gz
 
-COPY gather /usr/bin/
+COPY collection-scripts/* /usr/bin/
 ENTRYPOINT ["/usr/bin/gather"]
