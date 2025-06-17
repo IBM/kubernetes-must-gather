@@ -5,7 +5,7 @@
 
 SCRIPT_NAME="kubernetes-must-gather"
 TOOL_NAME="gather"
-VERSION="0.1.20250617021"
+VERSION="0.1.20250617023"
 MGOUTPUT="must-gather"
 LOGS_CRASHLOOPBACKOFF=false
 VERBOSE=false
@@ -19,7 +19,7 @@ echoInfo() {
   echo "$(echoPrefix) ${@}" | tee -a "${MGOUTPUT}/${SCRIPT_NAME}.log"
 }
 
-echoInfo "Version ${VERSION}"
+echoInfo "Version ${VERSION} with arguments:" "${@}"
 
 usage() {
   printf "Usage: %s [-c|--logs-crashloopbackoff]\n" "$(basename "${0}")"
@@ -34,12 +34,12 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     -c|--logs-crashloopbackoff)
       LOGS_CRASHLOOPBACKOFF=true
-      echo "[$(date)] Collecting CrashLoopBackOff logs."
+      echoInfo "Collecting CrashLoopBackOff logs."
       shift # past this argument
       ;;
     -v|--verbose)
       VERBOSE=true
-      echo "[$(date)] Verbose output enabled."
+      echoInfo "Verbose output enabled."
       shift # past this argument
       ;;
     -h|--help|--usage)
