@@ -74,11 +74,13 @@ getPodLogs() {
   ns="${1}"
   pod="${2}"
 
+  # TODO could we re-use ${ALL_PODS_JSON} for this?
   containers=$(oc get pod "$pod" -n "$ns" -o jsonpath='{.spec.containers[*].name}')
+  
   for container in $containers; do
     echoInfo "Collecting CrashLoopBackOff pod logs for $ns/$pod [$container]"
 
-    # The main oc adm inspect above for all namespaces creates a directory structure like:
+    # The main oc adm inspect for all namespaces creates a directory structure like:
     # 
     # ├── namespaces
     # │   ├── simple
