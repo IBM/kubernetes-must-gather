@@ -109,6 +109,10 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250528006 --
        ```
        oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:$VERSION
        ```
+    1. Run the default must gather with CrashLoopBackOff logs:
+       ```
+       oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:$VERSION -- gather --logs-crashloopbackoff
+       ```
 1. If testing looks good, push to the `latest` tag:
    ```
    podman manifest push --all quay.io/ibm/kubernetes-must-gather:latest docker://quay.io/ibm/kubernetes-must-gather:latest

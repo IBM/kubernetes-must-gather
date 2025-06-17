@@ -5,8 +5,9 @@
 
 PROJECT_NAME="kubernetes-must-gather"
 TOOL_NAME="gather"
-VERSION="0.1.20250528006"
+VERSION="0.1.20250617006"
 echo "[$(date)] ${PROJECT_NAME} Version ${VERSION}"
+MGOUTPUT="must-gather"
 
 usage() {
   printf "Usage: %s [-c|--logs-crashloopbackoff]\n" "$(basename "${0}")"
@@ -42,6 +43,12 @@ done
 
 set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
 
+ensureAllPodsJSON() {
+  if [ "${ALL_PODS_JSON}" = "" ]; then
+    ALL_PODS_JSON="$(oc get pods -A -o json)"
+  fi
+}
+
 # Store PIDs of all the subprocesses
 pids=()
 
@@ -58,23 +65,50 @@ do
 done
 
 group_resources_text=$(IFS=, ; echo "${filtered_group_resources[*]}")
-oc adm inspect --dest-dir must-gather --rotated-pod-logs "${group_resources_text}" --all-namespaces &
+oc adm inspect --dest-dir "${MGOUTPUT}" --rotated-pod-logs "${group_resources_text}" --all-namespaces &
 pids+=($!)
 
 if [ "${COLLECT_LOGS}" = true ]; then
-  OUTDIR="/must-gather/crashloop-logs"
   echo "[$(date)] Checking for CrashLoopBackOff pods"
-  oc get pods -A -o json | \
+  ensureAllPodsJSON
+  echo "${ALL_PODS_JSON}" | \
     jq -r '.items[] | select(.status.containerStatuses[]?.state.waiting?.reason == "CrashLoopBackOff") | [.metadata.namespace, .metadata.name] | @tsv' | \
       while IFS=$'\t' read -r ns pod; do
         containers=$(oc get pod "$pod" -n "$ns" -o jsonpath='{.spec.containers[*].name}')
         for container in $containers; do
-          echo "[$(date)] Collecting logs for $ns/$pod [$container]"
-          mkdir -p "$OUTDIR/$ns/$pod"
-          oc logs "$pod" -c "$container" -n "$ns" > "$OUTDIR/$ns/$pod/$container.log" \
-            2>>"$OUTDIR/error.log" || echo "Failed for $ns/$pod/$container"
-          oc logs "$pod" -c "$container" --previous -n "$ns" > "$OUTDIR/$ns/$pod/$container.log_previous" \
-            2>>"$OUTDIR/error.log" || echo "Failed for $ns/$pod/$container"
+          echo "[$(date)] Collecting CrashLoopBackOff pod logs for $ns/$pod [$container]"
+
+          # The main oc adm inspect above for all namespaces creates a directory structure like:
+          # 
+          # ├── namespaces
+          # │   ├── simple
+          # │   │   └── core
+          # │   │       └── pods
+          # │   │           ├── $POD.yaml
+          #
+          # However, oc adm inspect on a namespace with pod logs doesn't have the `core` folder:
+          # 
+          # ├── namespaces
+          # │   └── simple
+          # │       ├── pods
+          # │       │   ├── $POD
+          # │       │   │   ├── $POD.yaml
+          # │       │   │   └── $CONTAINER
+          # │       │   │       └── $CONTAINER
+          # │       │   │           └── logs
+          # │       │   │               ├── current.log
+          # │       │   │               └── previous.log
+          # 
+          # So mimic this structure:
+          OUTDIR="${MGOUTPUT}/namespaces/${ns}/pods/${pod}/${container}/${container}/logs/"
+          mkdir -p "${OUTDIR}"
+
+          # Also copy in the YAML
+          oc get pod -o yaml -n "${ns}" "${pod}" > "${MGOUTPUT}/namespaces/${ns}/pods/${pod}/${pod}.yaml" &
+          pids+=($!)
+
+          oc logs --timestamps "$pod" -c "$container" -n "$ns" > "${OUTDIR}/current.log" || echo "oc logs failed for $ns/$pod/$container"
+          oc logs --timestamps "$pod" -c "$container" --previous -n "$ns" > "${OUTDIR}/previous.log" || echo "oc logs --previous failed for $ns/$pod/$container"
         done
       done
 fi
