@@ -5,7 +5,7 @@
 
 SCRIPT_NAME="kubernetes-must-gather"
 TOOL_NAME="gather"
-VERSION="0.1.20250617023"
+VERSION="0.1.20250617025"
 MGOUTPUT="must-gather"
 LOGS_CRASHLOOPBACKOFF=false
 VERBOSE=false
@@ -17,6 +17,12 @@ echoPrefix() {
 
 echoInfo() {
   echo "$(echoPrefix) ${@}" | tee -a "${MGOUTPUT}/${SCRIPT_NAME}.log"
+}
+
+echoVerbose() {
+  if [ "${VERBOSE}" = true ]; then
+    echoInfo "${@}"
+  fi
 }
 
 echoInfo "Version ${VERSION} with arguments:" "${@}"
@@ -57,10 +63,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
-
-echoVerbose() {
-  echo "$(echoPrefix) ${@}" | tee -a "${MGOUTPUT}/${SCRIPT_NAME}.log"
-}
 
 ensureAllPodsJSON() {
   if [ "${ALL_PODS_JSON}" = "" ]; then
@@ -105,7 +107,7 @@ getPodLogs() {
     oc get pod -o yaml -n "${ns}" "${pod}" > "${MGOUTPUT}/namespaces/${ns}/pods/${pod}/${pod}.yaml" &
     pids+=($!)
 
-    [ "${VERBOSE}" = true ] && echoVerbose "Sparked off oc get pod ${ns}/${pod}; PIDs = ${pids[@]}"
+    echoVerbose "Sparked off oc get pod ${ns}/${pod}; PIDs = ${pids[@]}"
 
     oc logs --timestamps "$pod" -c "$container" -n "$ns" > "${OUTDIR}/current.log" || echo "oc logs failed for $ns/$pod/$container"
     oc logs --timestamps "$pod" -c "$container" --previous -n "$ns" > "${OUTDIR}/previous.log" || echo "oc logs --previous failed for $ns/$pod/$container"
@@ -131,7 +133,7 @@ group_resources_text=$(IFS=, ; echo "${filtered_group_resources[*]}")
 oc adm inspect --dest-dir "${MGOUTPUT}" --rotated-pod-logs "${group_resources_text}" --all-namespaces &
 pids+=($!)
 
-[ "${VERBOSE}" = true ] && echoVerbose "Sparked off main oc adm inspect; PIDs = ${pids[@]}"
+echoVerbose "Sparked off main oc adm inspect; PIDs = ${pids[@]}"
 
 if [ "${LOGS_CRASHLOOPBACKOFF}" = true ]; then
   echoInfo "Checking for CrashLoopBackOff pods"
@@ -143,15 +145,15 @@ if [ "${LOGS_CRASHLOOPBACKOFF}" = true ]; then
 fi
 
 # Check if PID array has any values, if so, wait for them to finish
-[ "${VERBOSE}" = true ] && echoVerbose "Final PIDs array: [${pids[@]}]"
+echoVerbose "Final PIDs array: [${pids[@]}]"
 if [ ${#pids[@]} -ne 0 ]; then
   echoInfo "Waiting on subprocesses to finish execution."
   wait "${pids[@]}"
 fi
 
-[ "${VERBOSE}" = true ] && echoVerbose "Wait completed, peforming final sync"
+echoVerbose "Wait completed, peforming final sync"
 
 # force disk flush to ensure that all data gathered is accessible in the copy container
 sync
 
-[ "${VERBOSE}" = true ] && echoVerbose "gather script finished"
+echoInfo "gather script finished"
