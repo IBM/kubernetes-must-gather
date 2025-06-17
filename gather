@@ -3,29 +3,44 @@
 # SPDX-License-Identifier: Apache-2.0
 # Assisted by watsonx Code Assistant
 
-PROJECT_NAME="kubernetes-must-gather"
+SCRIPT_NAME="kubernetes-must-gather"
 TOOL_NAME="gather"
-VERSION="0.1.20250617006"
-echo "[$(date)] ${PROJECT_NAME} Version ${VERSION}"
+VERSION="0.1.20250617021"
 MGOUTPUT="must-gather"
+LOGS_CRASHLOOPBACKOFF=false
+VERBOSE=false
+POSITIONAL_ARGS=()
+
+echoPrefix() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S.%N %Z')] ${SCRIPT_NAME}:"
+}
+
+echoInfo() {
+  echo "$(echoPrefix) ${@}" | tee -a "${MGOUTPUT}/${SCRIPT_NAME}.log"
+}
+
+echoInfo "Version ${VERSION}"
 
 usage() {
   printf "Usage: %s [-c|--logs-crashloopbackoff]\n" "$(basename "${0}")"
   cat <<"EOF"
                -c|--logs-crashloopbackoff: Gather current and previous pod logs of pods in CrashLoopBackOff state
+               -v|--verbose: Verbose/debug output
 EOF
   exit 22
 }
 
-POSITIONAL_ARGS=()
-COLLECT_LOGS=false
-
 while [[ $# -gt 0 ]]; do
   case $1 in
     -c|--logs-crashloopbackoff)
-      COLLECT_LOGS=true
+      LOGS_CRASHLOOPBACKOFF=true
       echo "[$(date)] Collecting CrashLoopBackOff logs."
-      shift # past argument
+      shift # past this argument
+      ;;
+    -v|--verbose)
+      VERBOSE=true
+      echo "[$(date)] Verbose output enabled."
+      shift # past this argument
       ;;
     -h|--help|--usage)
       usage
@@ -36,17 +51,65 @@ while [[ $# -gt 0 ]]; do
       ;;
     *)
       POSITIONAL_ARGS+=("$1") # save positional arg
-      shift # past argument
+      shift # past this argument
       ;;
   esac
 done
 
 set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
 
+echoVerbose() {
+  echo "$(echoPrefix) ${@}" | tee -a "${MGOUTPUT}/${SCRIPT_NAME}.log"
+}
+
 ensureAllPodsJSON() {
   if [ "${ALL_PODS_JSON}" = "" ]; then
     ALL_PODS_JSON="$(oc get pods -A -o json)"
   fi
+}
+
+getPodLogs() {
+  ns="${1}"
+  pod="${2}"
+
+  containers=$(oc get pod "$pod" -n "$ns" -o jsonpath='{.spec.containers[*].name}')
+  for container in $containers; do
+    echoInfo "Collecting CrashLoopBackOff pod logs for $ns/$pod [$container]"
+
+    # The main oc adm inspect above for all namespaces creates a directory structure like:
+    # 
+    # ├── namespaces
+    # │   ├── simple
+    # │   │   └── core
+    # │   │       └── pods
+    # │   │           ├── $POD.yaml
+    #
+    # However, oc adm inspect on a namespace with pod logs doesn't have the `core` folder:
+    # 
+    # ├── namespaces
+    # │   └── simple
+    # │       ├── pods
+    # │       │   ├── $POD
+    # │       │   │   ├── $POD.yaml
+    # │       │   │   └── $CONTAINER
+    # │       │   │       └── $CONTAINER
+    # │       │   │           └── logs
+    # │       │   │               ├── current.log
+    # │       │   │               └── previous.log
+    # 
+    # So mimic this structure:
+    OUTDIR="${MGOUTPUT}/namespaces/${ns}/pods/${pod}/${container}/${container}/logs/"
+    mkdir -p "${OUTDIR}"
+
+    # Also copy in the YAML
+    oc get pod -o yaml -n "${ns}" "${pod}" > "${MGOUTPUT}/namespaces/${ns}/pods/${pod}/${pod}.yaml" &
+    pids+=($!)
+
+    [ "${VERBOSE}" = true ] && echoVerbose "Sparked off oc get pod ${ns}/${pod}; PIDs = ${pids[@]}"
+
+    oc logs --timestamps "$pod" -c "$container" -n "$ns" > "${OUTDIR}/current.log" || echo "oc logs failed for $ns/$pod/$container"
+    oc logs --timestamps "$pod" -c "$container" --previous -n "$ns" > "${OUTDIR}/previous.log" || echo "oc logs --previous failed for $ns/$pod/$container"
+  done
 }
 
 # Store PIDs of all the subprocesses
@@ -68,56 +131,27 @@ group_resources_text=$(IFS=, ; echo "${filtered_group_resources[*]}")
 oc adm inspect --dest-dir "${MGOUTPUT}" --rotated-pod-logs "${group_resources_text}" --all-namespaces &
 pids+=($!)
 
-if [ "${COLLECT_LOGS}" = true ]; then
-  echo "[$(date)] Checking for CrashLoopBackOff pods"
+[ "${VERBOSE}" = true ] && echoVerbose "Sparked off main oc adm inspect; PIDs = ${pids[@]}"
+
+if [ "${LOGS_CRASHLOOPBACKOFF}" = true ]; then
+  echoInfo "Checking for CrashLoopBackOff pods"
   ensureAllPodsJSON
-  echo "${ALL_PODS_JSON}" | \
-    jq -r '.items[] | select(.status.containerStatuses[]?.state.waiting?.reason == "CrashLoopBackOff") | [.metadata.namespace, .metadata.name] | @tsv' | \
-      while IFS=$'\t' read -r ns pod; do
-        containers=$(oc get pod "$pod" -n "$ns" -o jsonpath='{.spec.containers[*].name}')
-        for container in $containers; do
-          echo "[$(date)] Collecting CrashLoopBackOff pod logs for $ns/$pod [$container]"
-
-          # The main oc adm inspect above for all namespaces creates a directory structure like:
-          # 
-          # ├── namespaces
-          # │   ├── simple
-          # │   │   └── core
-          # │   │       └── pods
-          # │   │           ├── $POD.yaml
-          #
-          # However, oc adm inspect on a namespace with pod logs doesn't have the `core` folder:
-          # 
-          # ├── namespaces
-          # │   └── simple
-          # │       ├── pods
-          # │       │   ├── $POD
-          # │       │   │   ├── $POD.yaml
-          # │       │   │   └── $CONTAINER
-          # │       │   │       └── $CONTAINER
-          # │       │   │           └── logs
-          # │       │   │               ├── current.log
-          # │       │   │               └── previous.log
-          # 
-          # So mimic this structure:
-          OUTDIR="${MGOUTPUT}/namespaces/${ns}/pods/${pod}/${container}/${container}/logs/"
-          mkdir -p "${OUTDIR}"
-
-          # Also copy in the YAML
-          oc get pod -o yaml -n "${ns}" "${pod}" > "${MGOUTPUT}/namespaces/${ns}/pods/${pod}/${pod}.yaml" &
-          pids+=($!)
-
-          oc logs --timestamps "$pod" -c "$container" -n "$ns" > "${OUTDIR}/current.log" || echo "oc logs failed for $ns/$pod/$container"
-          oc logs --timestamps "$pod" -c "$container" --previous -n "$ns" > "${OUTDIR}/previous.log" || echo "oc logs --previous failed for $ns/$pod/$container"
-        done
-      done
+  INPUT="$(echo "${ALL_PODS_JSON}" | jq -r '.items[] | select(.status.containerStatuses[]?.state.waiting?.reason == "CrashLoopBackOff") | [.metadata.namespace, .metadata.name] | @tsv')"
+  while IFS=$'\t' read -r ns pod; do
+    getPodLogs "${ns}" "${pod}"
+  done <<< "${INPUT}" # Piping into the while loop would be a subshell and would lose any variable updates (e.g. pids)
 fi
 
 # Check if PID array has any values, if so, wait for them to finish
+[ "${VERBOSE}" = true ] && echoVerbose "Final PIDs array: [${pids[@]}]"
 if [ ${#pids[@]} -ne 0 ]; then
-  echo "[$(date)] Waiting on subprocesses to finish execution."
+  echoInfo "Waiting on subprocesses to finish execution."
   wait "${pids[@]}"
 fi
 
+[ "${VERBOSE}" = true ] && echoVerbose "Wait completed, peforming final sync"
+
 # force disk flush to ensure that all data gathered is accessible in the copy container
 sync
+
+[ "${VERBOSE}" = true ] && echoVerbose "gather script finished"
