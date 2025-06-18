@@ -36,7 +36,7 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250618002 --
    ```
 1. Set a unique version of the image:
    ```
-   VERSION="20250528001"
+   VERSION="..."
    ```
 1. Set the namespace/project to push the image to (make sure this namespace exists):
    ```
