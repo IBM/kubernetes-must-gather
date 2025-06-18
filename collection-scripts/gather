@@ -3,20 +3,20 @@
 # SPDX-License-Identifier: Apache-2.0
 # Assisted by watsonx Code Assistant
 
-SCRIPT_NAME="kubernetes-must-gather"
-TOOL_NAME="gather"
-VERSION="0.1.20250617026"
+PROJECT_NAME="kubernetes-must-gather"
+SCRIPT_NAME="$(basename "${0}")"
+VERSION="0.1.20250618002"
 MGOUTPUT="must-gather"
-LOGS_CRASHLOOPBACKOFF=false
+LOGS_CRASHLOOPBACKOFF=true
 VERBOSE=false
 POSITIONAL_ARGS=()
 
 echoPrefix() {
-  echo "[$(date '+%Y-%m-%d %H:%M:%S.%N %Z')] ${SCRIPT_NAME}:"
+  echo "[$(date '+%Y-%m-%d %H:%M:%S.%N %Z')] ${PROJECT_NAME} ${SCRIPT_NAME}:"
 }
 
 echoInfo() {
-  echo "$(echoPrefix) ${@}" | tee -a "${MGOUTPUT}/${SCRIPT_NAME}.log"
+  echo "$(echoPrefix) ${@}" | tee -a "${MGOUTPUT}/${PROJECT_NAME}.log"
 }
 
 echoVerbose() {
@@ -28,9 +28,10 @@ echoVerbose() {
 echoInfo "Version ${VERSION} with arguments:" "${@}"
 
 usage() {
-  printf "Usage: %s [-c|--logs-crashloopbackoff]\n" "$(basename "${0}")"
+  printf "Usage: ${SCRIPT_NAME}\n"
   cat <<"EOF"
-               -c|--logs-crashloopbackoff: Gather current and previous pod logs of pods in CrashLoopBackOff state
+               --no-logs-crashloopbackoff: By default, pod logs of pods in CrashLoopBackOff
+                                           state are gathered. Use this option to disable this.
                -v|--verbose: Verbose/debug output
 EOF
   exit 22
@@ -38,14 +39,12 @@ EOF
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    -c|--logs-crashloopbackoff)
-      LOGS_CRASHLOOPBACKOFF=true
-      echoInfo "Collecting CrashLoopBackOff logs."
+    --no-logs-crashloopbackoff)
+      LOGS_CRASHLOOPBACKOFF=false
       shift # past this argument
       ;;
     -v|--verbose)
       VERBOSE=true
-      echoInfo "Verbose output enabled."
       shift # past this argument
       ;;
     -h|--help|--usage)
@@ -63,6 +62,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
+
+echoInfo "Options: LOGS_CRASHLOOPBACKOFF=${LOGS_CRASHLOOPBACKOFF}, VERBOSE=${VERBOSE}"
 
 ensureAllPodsJSON() {
   if [ "${ALL_PODS_JSON}" = "" ]; then
@@ -158,4 +159,4 @@ echoVerbose "Wait completed, peforming final sync"
 # force disk flush to ensure that all data gathered is accessible in the copy container
 sync
 
-echoInfo "${TOOL_NAME} script finished"
+echoInfo "script finished"

@@ -1,13 +1,13 @@
 # kubernetes-must-gather
 
-Custom must-gather image and collection script for Kubernetes and OpenShift. It should work on AMD/x64, ARM/AARCH, PPC64, and z/Linux.
+Custom must-gather image and collection script for Kubernetes and OpenShift. It should work on AMD/x64, ARM/AARCH, PPC64, and z/Linux. The image is published to Quay at [quay.io/ibm/kubernetes-must-gather](https://quay.io/repository/ibm/kubernetes-must-gather).
 
 ## Usage
 
 ### Basic usage
 
 ```
-oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250617026
+oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250618002
 ```
 
 ### Customized usage
@@ -15,13 +15,7 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250617026
 #### Usage help
 
 ```
-oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250617026 -- gather -h
-```
-
-#### Also gather current and previous pod logs of pods in CrashLoopBackOff state
-
-```
-oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250617026 -- gather --logs-crashloopbackoff
+oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250618002 -- gather -h
 ```
 
 ## Development
@@ -108,10 +102,6 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250617026 --
     1. Run the default must gather:
        ```
        oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:$VERSION
-       ```
-    1. Run the default must gather with CrashLoopBackOff logs:
-       ```
-       oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:$VERSION -- gather --logs-crashloopbackoff
        ```
 1. If testing looks good, push to the `latest` tag:
    ```
