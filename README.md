@@ -1,6 +1,6 @@
 # kubernetes-must-gather
 
-Custom must-gather image and collection script for Kubernetes and OpenShift. It should work on AMD/x64, ARM/AARCH, PPC64, and z/Linux. The image is published to Quay at [quay.io/ibm/kubernetes-must-gather](https://quay.io/repository/ibm/kubernetes-must-gather).
+Custom must-gather image and collection script for Kubernetes and OpenShift. It should work on AMD/x64, ARM/AARCH, PPC64, and z/Linux. The image is published to Quay at [quay.io/ibm/kubernetes-must-gather](https://quay.io/repository/ibm/kubernetes-must-gather). Based on [OpenShift `must-gather`](https://github.com/openshift/must-gather).
 
 ## Usage
 
