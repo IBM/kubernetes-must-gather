@@ -5,7 +5,7 @@
 
 PROJECT_NAME="kubernetes-must-gather"
 SCRIPT_NAME="$(basename "${0}")"
-VERSION="0.1.20250701006"
+VERSION="0.1.20250701007"
 MGOUTPUT="must-gather"
 EXTRADEBUG=${EXTRADEBUG:-false}
 declare -A OPTIONS=()
@@ -377,6 +377,19 @@ if [ ${OPTIONS[logs-crashloopbackoff]} = true ]; then
     getPodLogs "${ns}" "${pod}"
   done <<< "${INPUT}" # Piping into the while loop would be a subshell and would lose any variable updates (e.g. pids)
 fi
+
+CURRENT_SCRIPT="$(basename "${0}")"
+for OTHER_SCRIPT in $(ls /usr/bin/gather*); do
+  OTHER_SCRIPT_NAME="$(basename "${OTHER_SCRIPT}")"
+  if [ "${OTHER_SCRIPT_NAME}" != "${CURRENT_SCRIPT}" ]; then
+    if [ OPTIONS[${OTHER_SCRIPT_NAME}] = true ]; then
+      echoInfo "Executing script ${OTHER_SCRIPT_NAME}"
+      #export BASE_COLLECTION_PATH="${MGOUTPUT}"
+      /bin/bash "${OTHER_SCRIPT}"
+      echoInfo "Finished executing ${OTHER_SCRIPT_NAME}"
+    fi
+  fi
+done
 
 # Check if PID array has any values, if so, wait for them to finish
 echoVerbose "Final PIDs array: [${pids[@]}]"
