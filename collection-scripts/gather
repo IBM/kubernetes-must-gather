@@ -5,11 +5,10 @@
 
 PROJECT_NAME="kubernetes-must-gather"
 SCRIPT_NAME="$(basename "${0}")"
-VERSION="0.1.20250618002"
+VERSION="0.1.20250701006"
 MGOUTPUT="must-gather"
-LOGS_CRASHLOOPBACKOFF=true
-VERBOSE=false
-POSITIONAL_ARGS=()
+EXTRADEBUG=${EXTRADEBUG:-false}
+declare -A OPTIONS=()
 
 echoPrefix() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S.%N %Z')] ${PROJECT_NAME} ${SCRIPT_NAME}:"
@@ -19,43 +18,263 @@ echoInfo() {
   echo "$(echoPrefix) ${@}" | tee -a "${MGOUTPUT}/${PROJECT_NAME}.log"
 }
 
+echoWithoutPrefix() {
+  echo "${@}" | tee -a "${MGOUTPUT}/${PROJECT_NAME}.log"
+}
+
 echoVerbose() {
-  if [ "${VERBOSE}" = true ]; then
+  if [ ${OPTIONS[log]} -gt 1 ]; then
     echoInfo "${@}"
   fi
 }
 
-echoInfo "Version ${VERSION} with arguments:" "${@}"
+echoInfo "Version ${VERSION}. Options passed: " "${@}"
+
+getopt --test 2> /dev/null
+if [ $? -ne 4 ]; then
+    echoInfo "Enhanced getopt is required" >/dev/stderr
+    exit 1
+fi
+
+# Optional short-hand flags for options
+declare -A OPTIONS_SHORTFLAGS=(
+  [help]=h
+  [log]=v
+  [logs-crashloopbackoff]=c
+  [usage]=u
+)
+
+# Option descriptions. Do not end with a period.
+
+## Descriptions should always start with 'Enable '
+declare -A OPTIONS_BOOLEANS_DESCRIPTIONS=(
+  [logs-crashloopbackoff]="Enable gathering pod logs of pods in CrashLoopBackOff state"
+  [help]="Enable display of help/usage"
+  [usage]="Enable display of help/usage"
+)
+
+declare -A OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS=(
+)
+
+declare -A OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS=(
+  [log]="Script log level from 0-2 (higher is more verbose)"
+)
+
+CURRENT_SCRIPT="$(basename "${0}")"
+for OTHER_SCRIPT in $(ls /usr/bin/gather*); do
+  OTHER_SCRIPT="$(basename "${OTHER_SCRIPT}")"
+  if [ "${OTHER_SCRIPT}" != "${CURRENT_SCRIPT}" ]; then
+    OPTIONS[${OTHER_SCRIPT}]=false
+    OPTIONS_BOOLEANS_DESCRIPTIONS[${OTHER_SCRIPT}]="Enable execution of ${OTHER_SCRIPT}. See https://github.com/openshift/must-gather/blob/main/collection-scripts/${OTHER_SCRIPT}"
+  fi
+done
+
+# Set option defaults
+OPTIONS[help]=false
+OPTIONS[log]=1
+OPTIONS[logs-crashloopbackoff]=true
+OPTIONS[usage]=false
+
+# Flag defaults
+declare -A OPTIONS_FLAGS_ARG_NOT_REQUIRED_DEFAULTS=(
+  [log]=2
+)
+
+# For boolean options, do not add a --no- option
+declare -A OPTIONS_BOOLEANS_SKIPNO=(
+  [usage]=true
+  [help]=true
+)
+
+# Option pre-processing (e.g. add no- flags)
+for OPTION in "${!OPTIONS_BOOLEANS_DESCRIPTIONS[@]}"; do
+  if ! [[ -v OPTIONS_BOOLEANS_SKIPNO[${OPTION}] ]]; then
+    OPTIONS_BOOLEANS_DESCRIPTIONS["no-${OPTION}"]="Disable ${OPTIONS_BOOLEANS_DESCRIPTIONS[${OPTION}]#Enable }"
+  fi
+done
+
+# Option processing
+
+GETOPTS_SHORT=""
+GETOPTS_LONG=""
+for OPTION in "${!OPTIONS[@]}"; do
+  if [ "${GETOPTS_LONG}" != "" ]; then
+    GETOPTS_LONG="${GETOPTS_LONG},"
+  fi
+  GETOPTS_LONG="${GETOPTS_LONG}${OPTION}"
+  if [[ -v OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS[${OPTION}] ]]; then
+    GETOPTS_LONG="${GETOPTS_LONG}:"
+  elif [[ -v OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS[${OPTION}] ]]; then
+    GETOPTS_LONG="${GETOPTS_LONG}::"
+  fi
+
+  if [[ -v OPTIONS_BOOLEANS_DESCRIPTIONS[${OPTION}] ]] && ! [[ -v OPTIONS_BOOLEANS_SKIPNO[${OPTION}] ]]; then
+    GETOPTS_LONG="${GETOPTS_LONG},no-${OPTION}"
+  fi
+
+  if [[ -v OPTIONS_SHORTFLAGS[${OPTION}] ]]; then
+    SHORT_FLAG="${OPTIONS_SHORTFLAGS[${OPTION}]}"
+    GETOPTS_SHORT="${GETOPTS_SHORT}${SHORT_FLAG}"
+    if [[ -v OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS[${OPTION}] ]]; then
+      GETOPTS_SHORT="${GETOPTS_SHORT}:"
+    elif [[ -v OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS[${OPTION}] ]]; then
+      GETOPTS_SHORT="${GETOPTS_SHORT}::"
+    fi
+  fi
+done
+
+if [ ${EXTRADEBUG} = true ]; then
+  echoInfo "GETOPTS_SHORT = ${GETOPTS_SHORT}"
+  echoInfo "GETOPTS_LONG = ${GETOPTS_LONG}"
+fi
+
+usageOptionsUnsorted() {
+  for OPTION in "${!OPTIONS_BOOLEANS_DESCRIPTIONS[@]}"; do
+    if [ "${OPTION#no-}" = "${OPTION}" ]; then
+      printf "       "
+      printf -- "--${OPTION}"
+      if ! [[ -v OPTIONS_BOOLEANS_SKIPNO[${OPTION}] ]]; then
+        printf -- " | --no-${OPTION}"
+      fi
+      if [[ -v OPTIONS_SHORTFLAGS[${OPTION}] ]]; then
+        printf -- " | -${OPTIONS_SHORTFLAGS[${OPTION}]}"
+      fi
+      if ! [[ -v OPTIONS_BOOLEANS_SKIPNO[${OPTION}] ]]; then
+        printf ": Enable/disable"
+      else
+        printf ": Enable"
+      fi
+      printf " ${OPTIONS_BOOLEANS_DESCRIPTIONS[${OPTION}]#Enable }."
+      if ! [[ -v OPTIONS_BOOLEANS_SKIPNO[${OPTION}] ]]; then
+        printf " Currently: "
+        if [ ${OPTIONS[${OPTION}]} = true ]; then
+          printf "Enabled"
+        else
+          printf "Disabled"
+        fi
+        printf "."
+      fi
+
+      printf "\n"
+    fi
+  done
+
+  for OPTION in "${!OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS[@]}"; do
+    printf "       "
+    printf -- "--${OPTION}=ARGUMENT"
+    if [[ -v OPTIONS_SHORTFLAGS[${OPTION}] ]]; then
+      printf -- " | -${OPTIONS_SHORTFLAGS[${OPTION}]}ARGUMENT"
+    fi
+    printf ": ${OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS[${OPTION}]}. Currently: ${OPTIONS[${OPTION}]}."
+    printf "\n"
+  done
+
+  for OPTION in "${!OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS[@]}"; do
+    printf "       "
+    printf -- "--${OPTION}[=ARGUMENT[=${OPTIONS_FLAGS_ARG_NOT_REQUIRED_DEFAULTS[${OPTION}]}]]"
+    if [[ -v OPTIONS_SHORTFLAGS[${OPTION}] ]]; then
+      printf -- " | -${OPTIONS_SHORTFLAGS[${OPTION}]}[ARGUMENT[=${OPTIONS_FLAGS_ARG_NOT_REQUIRED_DEFAULTS[${OPTION}]}]]"
+    fi
+    printf ": ${OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS[${OPTION}]}. Currently: ${OPTIONS[${OPTION}]}."
+    printf "\n"
+  done
+}
 
 usage() {
-  printf "Usage: ${SCRIPT_NAME}\n"
-  cat <<"EOF"
-               --no-logs-crashloopbackoff: By default, pod logs of pods in CrashLoopBackOff
-                                           state are gathered. Use this option to disable this.
-               -v|--verbose: Verbose/debug output
-EOF
+  printf "Usage: $(basename "${0}")\n"
+
+  usageOptionsUnsorted | sort
+
   exit 22
 }
 
+# https://www.kernel.org/doc/man-pages/online/pages/man1/getopt.1.html
+PARSED=$(getopt --alternative --options "-${GETOPTS_SHORT}" --longoptions "${GETOPTS_LONG}" --name "$0" -- "$@")
+if [ $? -ne 0 ]; then
+  # Invalid argument and getopt printed the error
+  exit 2
+fi
+
+eval set -- "${PARSED}"
+
+POSITIONAL_ARGS=()
+
+if [ ${EXTRADEBUG} = true ]; then
+  for arg in "${@}"; do
+    echoInfo "Arg: ${arg}"
+  done
+fi
+
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --no-logs-crashloopbackoff)
-      LOGS_CRASHLOOPBACKOFF=false
+    -h|-u)
+      OPTIONS[usage]=true
       shift # past this argument
       ;;
-    -v|--verbose)
-      VERBOSE=true
+    --)
       shift # past this argument
       ;;
-    -h|--help|--usage)
-      usage
+    --*)
+      OPTION="${1}"
+      shift # past this argument
+
+      if [[ -v OPTIONS_BOOLEANS_DESCRIPTIONS["${OPTION#--}"] ]]; then
+        if [ "${OPTION#--no-}" = "${OPTION}" ]; then
+          OPTIONS["${OPTION#--}"]=true
+        else
+          OPTIONS["${OPTION#--no-}"]=false
+        fi
+      else
+        if [[ -v OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
+          OPTIONS["${OPTION#--}"]=$1
+          shift # past this argument
+        elif [[ -v OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
+          if [ "${1}" = "" ]; then
+            OPTIONS["${OPTION#--}"]=${OPTIONS_FLAGS_ARG_NOT_REQUIRED_DEFAULTS[${OPTION}]}
+          else
+            OPTIONS["${OPTION#--}"]=$1
+          fi
+          shift # past this argument
+        fi
+      fi
+
       ;;
-    -*|--*)
-      echo "Unknown option $1"
-      exit 1
+    -*)
+      FLAG="${1}"
+      shift # past this argument
+
+      OPTION=""
+      for LONGFLAG in "${!OPTIONS_SHORTFLAGS[@]}"; do
+        SHORTFLAG="${OPTIONS_SHORTFLAGS[${LONGFLAG}]}"
+        if [ "${FLAG#-}" = "${SHORTFLAG}" ]; then
+          OPTION="${LONGFLAG}"
+        fi
+      done
+
+      if [[ -v OPTIONS_BOOLEANS_DESCRIPTIONS["${OPTION#--}"] ]]; then
+        if [ "${OPTION#--no-}" = "${OPTION}" ]; then
+          OPTIONS["${OPTION#--}"]=true
+        else
+          OPTIONS["${OPTION#--no-}"]=false
+        fi
+      else
+        if [[ -v OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
+          OPTIONS["${OPTION#--}"]=$1
+          shift # past this argument
+        elif [[ -v OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
+          if [ "${1}" = "" ]; then
+            OPTIONS["${OPTION#--}"]=${OPTIONS_FLAGS_ARG_NOT_REQUIRED_DEFAULTS[${OPTION}]}
+          else
+            OPTIONS["${OPTION#--}"]=$1
+          fi
+          shift # past this argument
+        fi
+      fi
+
       ;;
     *)
-      POSITIONAL_ARGS+=("$1") # save positional arg
+      # save positional arg
+      POSITIONAL_ARGS+=("${1}")
       shift # past this argument
       ;;
   esac
@@ -63,7 +282,19 @@ done
 
 set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
 
-echoInfo "Options: LOGS_CRASHLOOPBACKOFF=${LOGS_CRASHLOOPBACKOFF}, VERBOSE=${VERBOSE}"
+if [ ${OPTIONS[usage]} = true ] || [ ${OPTIONS[help]} = true ]; then
+  usage
+fi
+
+printFinalOptions() {
+  for OPTION in "${!OPTIONS[@]}"; do
+    echo "  ${OPTION} = ${OPTIONS[${OPTION}]}"
+  done
+}
+
+echoInfo "Final options:"
+FINAL_OPTIONS="$(printFinalOptions | sort)"
+echoWithoutPrefix "${FINAL_OPTIONS}"
 
 ensureAllPodsJSON() {
   if [ "${ALL_PODS_JSON}" = "" ]; then
@@ -112,8 +343,8 @@ getPodLogs() {
 
     echoVerbose "Sparked off oc get pod ${ns}/${pod}; PIDs = ${pids[@]}"
 
-    oc logs --timestamps "$pod" -c "$container" -n "$ns" > "${OUTDIR}/current.log" || echo "oc logs failed for $ns/$pod/$container"
-    oc logs --timestamps "$pod" -c "$container" --previous -n "$ns" > "${OUTDIR}/previous.log" || echo "oc logs --previous failed for $ns/$pod/$container"
+    oc logs --timestamps "$pod" -c "$container" -n "$ns" > "${OUTDIR}/current.log"
+    oc logs --timestamps "$pod" -c "$container" --previous -n "$ns" > "${OUTDIR}/previous.log"
   done
 }
 
@@ -138,7 +369,7 @@ pids+=($!)
 
 echoVerbose "Sparked off main oc adm inspect; PIDs = ${pids[@]}"
 
-if [ "${LOGS_CRASHLOOPBACKOFF}" = true ]; then
+if [ ${OPTIONS[logs-crashloopbackoff]} = true ]; then
   echoInfo "Checking for CrashLoopBackOff pods"
   ensureAllPodsJSON
   INPUT="$(echo "${ALL_PODS_JSON}" | jq -r '.items[] | select(.status.containerStatuses[]?.state.waiting?.reason == "CrashLoopBackOff") | [.metadata.namespace, .metadata.name] | @tsv')"
