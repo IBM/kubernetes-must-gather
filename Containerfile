@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Assisted by watsonx Code Assistant
 
-FROM registry.access.redhat.com/ubi10/ubi:latest
+FROM registry.access.redhat.com/ubi9/ubi:latest
 
 RUN yum install -y jq && \
     yum clean all && \
@@ -10,8 +10,9 @@ RUN yum install -y jq && \
     tar -xvzf openshift-client-linux*.tar.gz -C /usr/local/bin oc && \
     rm -f openshift-client-linux*.tar.gz
 
+# Currently doesn't work because not all platforms are available
 # https://github.com/openshift/must-gather/tree/main/collection-scripts
-COPY --from=quay.io/openshift/origin-must-gather:latest /usr/bin/gather* /usr/bin/
+#COPY --from=quay.io/openshift/origin-must-gather:latest /usr/bin/gather* /usr/bin/
 
 COPY collection-scripts/* /usr/bin/
 
