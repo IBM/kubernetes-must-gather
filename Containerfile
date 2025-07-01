@@ -12,10 +12,12 @@ RUN dnf install -y jq git && \
 
 # This doesn't work because not all platforms are available
 #COPY --from=quay.io/openshift/origin-must-gather:latest /usr/bin/gather* /usr/bin/
+# So instead we just get the upstream scripts
 RUN git clone https://github.com/openshift/must-gather && \
     rm -rf must-gather/.git && \
     cp must-gather/collection-scripts/* /usr/bin/
 
+# Now overwrite any of our customizations
 COPY collection-scripts/* /usr/bin/
 
 CMD ["/usr/bin/gather"]
