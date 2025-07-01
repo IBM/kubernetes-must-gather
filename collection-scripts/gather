@@ -205,37 +205,39 @@ if [ ${EXTRADEBUG} = true ]; then
   done
 fi
 
+IN_POSITIONAL=false
 while [[ $# -gt 0 ]]; do
   case $1 in
-    -h|-u)
-      OPTIONS[usage]=true
-      shift # past this argument
-      ;;
     --)
+      IN_POSITIONAL=true
       shift # past this argument
       ;;
     --*)
       OPTION="${1}"
       shift # past this argument
 
-      if [[ -v OPTIONS_BOOLEANS_DESCRIPTIONS["${OPTION#--}"] ]]; then
-        if [ "${OPTION#--no-}" = "${OPTION}" ]; then
-          OPTIONS["${OPTION#--}"]=true
+      if [ ${IN_POSITIONAL} = false ]; then
+        if [[ -v OPTIONS_BOOLEANS_DESCRIPTIONS["${OPTION#--}"] ]]; then
+          if [ "${OPTION#--no-}" = "${OPTION}" ]; then
+            OPTIONS["${OPTION#--}"]=true
+          else
+            OPTIONS["${OPTION#--no-}"]=false
+          fi
         else
-          OPTIONS["${OPTION#--no-}"]=false
+          if [[ -v OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
+            OPTIONS["${OPTION#--}"]=$1
+            shift # past this argument
+          elif [[ -v OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
+            if [ "${1}" = "" ]; then
+              OPTIONS["${OPTION#--}"]=${OPTIONS_FLAGS_ARG_NOT_REQUIRED_DEFAULTS[${OPTION}]}
+            else
+              OPTIONS["${OPTION#--}"]=$1
+            fi
+            shift # past this argument
+          fi
         fi
       else
-        if [[ -v OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
-          OPTIONS["${OPTION#--}"]=$1
-          shift # past this argument
-        elif [[ -v OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
-          if [ "${1}" = "" ]; then
-            OPTIONS["${OPTION#--}"]=${OPTIONS_FLAGS_ARG_NOT_REQUIRED_DEFAULTS[${OPTION}]}
-          else
-            OPTIONS["${OPTION#--}"]=$1
-          fi
-          shift # past this argument
-        fi
+        POSITIONAL_ARGS+=("${OPTION}")
       fi
 
       ;;
@@ -243,37 +245,40 @@ while [[ $# -gt 0 ]]; do
       FLAG="${1}"
       shift # past this argument
 
-      OPTION=""
-      for LONGFLAG in "${!OPTIONS_SHORTFLAGS[@]}"; do
-        SHORTFLAG="${OPTIONS_SHORTFLAGS[${LONGFLAG}]}"
-        if [ "${FLAG#-}" = "${SHORTFLAG}" ]; then
-          OPTION="${LONGFLAG}"
-        fi
-      done
+      if [ ${IN_POSITIONAL} = false ]; then
+        OPTION=""
+        for LONGFLAG in "${!OPTIONS_SHORTFLAGS[@]}"; do
+          SHORTFLAG="${OPTIONS_SHORTFLAGS[${LONGFLAG}]}"
+          if [ "${FLAG#-}" = "${SHORTFLAG}" ]; then
+            OPTION="${LONGFLAG}"
+          fi
+        done
 
-      if [[ -v OPTIONS_BOOLEANS_DESCRIPTIONS["${OPTION#--}"] ]]; then
-        if [ "${OPTION#--no-}" = "${OPTION}" ]; then
-          OPTIONS["${OPTION#--}"]=true
+        if [[ -v OPTIONS_BOOLEANS_DESCRIPTIONS["${OPTION#--}"] ]]; then
+          if [ "${OPTION#--no-}" = "${OPTION}" ]; then
+            OPTIONS["${OPTION#--}"]=true
+          else
+            OPTIONS["${OPTION#--no-}"]=false
+          fi
         else
-          OPTIONS["${OPTION#--no-}"]=false
+          if [[ -v OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
+            OPTIONS["${OPTION#--}"]=$1
+            shift # past this argument
+          elif [[ -v OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
+            if [ "${1}" = "" ]; then
+              OPTIONS["${OPTION#--}"]=${OPTIONS_FLAGS_ARG_NOT_REQUIRED_DEFAULTS[${OPTION}]}
+            else
+              OPTIONS["${OPTION#--}"]=$1
+            fi
+            shift # past this argument
+          fi
         fi
       else
-        if [[ -v OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
-          OPTIONS["${OPTION#--}"]=$1
-          shift # past this argument
-        elif [[ -v OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
-          if [ "${1}" = "" ]; then
-            OPTIONS["${OPTION#--}"]=${OPTIONS_FLAGS_ARG_NOT_REQUIRED_DEFAULTS[${OPTION}]}
-          else
-            OPTIONS["${OPTION#--}"]=$1
-          fi
-          shift # past this argument
-        fi
+        POSITIONAL_ARGS+=("${FLAG}")
       fi
 
       ;;
     *)
-      # save positional arg
       POSITIONAL_ARGS+=("${1}")
       shift # past this argument
       ;;
