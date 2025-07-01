@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Assisted by watsonx Code Assistant
 
-FROM registry.access.redhat.com/ubi9/ubi:latest
+FROM registry.access.redhat.com/ubi10/ubi:latest
 
 RUN yum install -y jq && \
     yum clean all && \
