@@ -74,17 +74,9 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250618002 --
    ```
    for i in $(podman manifest inspect quay.io/ibm/kubernetes-must-gather:latest | jq '.manifests[].digest' | tr '\n' ' ' | sed 's/"//g'); do podman manifest remove quay.io/ibm/kubernetes-must-gather:latest $i; done
    ```
-1. Check that the manifest has no images:
-   ```
-   podman manifest inspect quay.io/ibm/kubernetes-must-gather:latest
-   ```
 1. Build the images:
    ```
    podman build --platform linux/amd64,linux/ppc64le,linux/s390x,linux/arm64 --jobs=1 --manifest quay.io/ibm/kubernetes-must-gather:latest .
-   ```
-1. Check that the manifest looks good:
-   ```
-   podman manifest inspect quay.io/ibm/kubernetes-must-gather:latest
    ```
 1. Log into Quay:
    ```
