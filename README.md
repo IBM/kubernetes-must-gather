@@ -14,7 +14,7 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250702006
 
 #### Default Behavior
 
-`kubernetes-must-gather` gathers significantly less than the `oc adm must-gather` image because `kubernetes-must-gather` is designed for a more lightweight and iterative workflow using command line flags. By default, `kubernetes-must-gather` gathers:
+`kubernetes-must-gather` gathers significantly less than the default `oc adm must-gather` image because `kubernetes-must-gather` is designed for a more lightweight and iterative workflow using command line flags. By default, `kubernetes-must-gather` gathers:
 
 1. `oc describe` YAMLs for all namespaces for the following resources: `nodes pods events securitycontextconstraints`
 1. Pod logs of pods in CrashLoopBackOff state for all namespaces. Disable with `--no-logs-crashloopbackoff`
