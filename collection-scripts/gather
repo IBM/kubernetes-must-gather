@@ -5,7 +5,7 @@
 
 PROJECT_NAME="kubernetes-must-gather"
 SCRIPT_NAME="$(basename "${0}")"
-VERSION="0.1.20250702005"
+VERSION="0.1.20250702006"
 MGOUTPUT="must-gather"
 EXTRADEBUG=${EXTRADEBUG:-false}
 declare -A OPTIONS=()
@@ -396,7 +396,7 @@ for OTHER_SCRIPT in $(ls /usr/bin/gather*); do
     if [ ${OPTIONS[${OTHER_SCRIPT_NAME}]} = true ]; then
       echoInfo "Executing script ${OTHER_SCRIPT_NAME}"
       #export BASE_COLLECTION_PATH="${MGOUTPUT}"
-      /bin/bash "${OTHER_SCRIPT}"
+      /bin/bash "${OTHER_SCRIPT}" 2>&1 | tee -a "${MGOUTPUT}/${PROJECT_NAME}.log"
       echoInfo "Finished executing ${OTHER_SCRIPT_NAME}"
     fi
   fi
