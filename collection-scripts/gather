@@ -5,7 +5,7 @@
 
 PROJECT_NAME="kubernetes-must-gather"
 SCRIPT_NAME="$(basename "${0}")"
-VERSION="0.1.20250701007"
+VERSION="0.1.20250702005"
 MGOUTPUT="must-gather"
 EXTRADEBUG=${EXTRADEBUG:-false}
 declare -A OPTIONS=()
@@ -369,10 +369,13 @@ do
 done
 
 group_resources_text=$(IFS=, ; echo "${filtered_group_resources[*]}")
+
+echoInfo "Calling main oc adm inspect with ${group_resources_text}"
+
 oc adm inspect --dest-dir "${MGOUTPUT}" --rotated-pod-logs "${group_resources_text}" --all-namespaces &
 pids+=($!)
 
-echoVerbose "Sparked off main oc adm inspect; PIDs = ${pids[@]}"
+echoInfo "Sparked off main oc adm inspect; PIDs = ${pids[@]}"
 
 if [ ${OPTIONS[logs-crashloopbackoff]} = true ]; then
   echoInfo "Checking for CrashLoopBackOff pods"
@@ -383,11 +386,14 @@ if [ ${OPTIONS[logs-crashloopbackoff]} = true ]; then
   done <<< "${INPUT}" # Piping into the while loop would be a subshell and would lose any variable updates (e.g. pids)
 fi
 
+echoInfo "Checking if we should call any included scripts"
+
 CURRENT_SCRIPT="$(basename "${0}")"
 for OTHER_SCRIPT in $(ls /usr/bin/gather*); do
   OTHER_SCRIPT_NAME="$(basename "${OTHER_SCRIPT}")"
   if [ "${OTHER_SCRIPT_NAME}" != "${CURRENT_SCRIPT}" ]; then
-    if [ OPTIONS[${OTHER_SCRIPT_NAME}] = true ]; then
+    echoVerbose "Other script ${OTHER_SCRIPT_NAME} = ${OPTIONS[${OTHER_SCRIPT_NAME}]}"
+    if [ ${OPTIONS[${OTHER_SCRIPT_NAME}]} = true ]; then
       echoInfo "Executing script ${OTHER_SCRIPT_NAME}"
       #export BASE_COLLECTION_PATH="${MGOUTPUT}"
       /bin/bash "${OTHER_SCRIPT}"
@@ -397,13 +403,13 @@ for OTHER_SCRIPT in $(ls /usr/bin/gather*); do
 done
 
 # Check if PID array has any values, if so, wait for them to finish
-echoVerbose "Final PIDs array: [${pids[@]}]"
+echoInfo "Final PIDs array: [${pids[@]}]"
 if [ ${#pids[@]} -ne 0 ]; then
   echoInfo "Waiting on subprocesses to finish execution."
   wait "${pids[@]}"
 fi
 
-echoVerbose "Wait completed, peforming final sync"
+echoInfo "Wait completed, peforming final sync"
 
 # force disk flush to ensure that all data gathered is accessible in the copy container
 sync
