@@ -1,6 +1,6 @@
 # kubernetes-must-gather
 
-Custom must-gather image and collection script for Kubernetes and OpenShift. It should work on AMD/x64, ARM/AARCH, PPC64, and z/Linux. The image is published to Quay at [quay.io/ibm/kubernetes-must-gather](https://quay.io/repository/ibm/kubernetes-must-gather). Based on [OpenShift `must-gather`](https://github.com/openshift/must-gather).
+`kubernetes-must-gather` is a custom must-gather image and collection script for Kubernetes and OpenShift. It should work on AMD/x64, ARM/AARCH, PPC64, and z/Linux. The image is published to Quay at [quay.io/ibm/kubernetes-must-gather](https://quay.io/repository/ibm/kubernetes-must-gather). Based on [OpenShift `must-gather`](https://github.com/openshift/must-gather).
 
 ## Usage
 
@@ -17,6 +17,18 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250702006
 ```
 oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250702006 -- gather -h
 ```
+
+#### oc adm must-gather collection-scripts
+
+`kubernetes-must-gather` can run any of the other collection scripts available in the upstream `oc adm must-gather` [collection-scripts](https://github.com/openshift/must-gather/tree/main/collection-scripts). Just pass `--` and the name of the script (multiple allowed and they're executed in sequence). For example, to run `gather_apirequestcounts`:
+
+```
+oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- gather --gather_apirequestcounts
+```
+
+This calls <https://github.com/openshift/must-gather/blob/main/collection-scripts/gather_apirequestcounts> and extra output is in the download at `must-gather.local.*/quay-io-ibm-kubernetes-must-gather*/requests/`
+
+---
 
 ## Development
 
