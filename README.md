@@ -105,6 +105,10 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250702006 --
    ```
 1. If all looks good, update the version above in the README.
 
+## Notes
+
+We generally recommend using a specific tag rather than `latest` because `oc adm must-gather` [uses an `ImagePullPolicy` of `PullIfNotPresent`](https://github.com/openshift/oc/issues/2029) so if you were to use `--image=quay.io/ibm/kubernetes-must-gather:latest` once, then you could not get a newer version of the `latest` image in the same cluster unless you manually deleted that image from the internal image registry.
+
 ## Files
 
 * [LICENSE](LICENSE)
@@ -112,7 +116,7 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250702006 --
 * [MAINTAINERS.md](MAINTAINERS.md)
 * [CHANGELOG.md](CHANGELOG.md)
 
-## Notes
+## Issues and Pull Requests
 
 If you have any questions or issues you can create a new [issue here][issues].
 
