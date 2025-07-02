@@ -7,7 +7,7 @@ Custom must-gather image and collection script for Kubernetes and OpenShift. It 
 ### Basic usage
 
 ```
-oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250618002
+oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250702005
 ```
 
 ### Customized usage
@@ -15,7 +15,7 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250618002
 #### Usage help
 
 ```
-oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250618002 -- gather -h
+oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250702005 -- gather -h
 ```
 
 ## Development
