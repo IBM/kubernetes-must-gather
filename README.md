@@ -35,6 +35,10 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- gather -
 
 This calls <https://github.com/openshift/must-gather/blob/main/collection-scripts/gather_apirequestcounts> and extra output is in the download at `must-gather.local.*/quay-io-ibm-kubernetes-must-gather*/requests/`
 
+## Notes
+
+We generally recommend using a specific tag rather than `latest` because `oc adm must-gather` [uses an `ImagePullPolicy` of `PullIfNotPresent`](https://github.com/openshift/oc/issues/2029) so if you were to use `--image=quay.io/ibm/kubernetes-must-gather:latest` once, then you could not get a newer version of the `latest` image in the same cluster unless you manually deleted that image from the internal image registry.
+
 ---
 
 ## Development
@@ -123,10 +127,6 @@ This calls <https://github.com/openshift/must-gather/blob/main/collection-script
    oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest
    ```
 1. If all looks good, update the version above in the README.
-
-## Notes
-
-We generally recommend using a specific tag rather than `latest` because `oc adm must-gather` [uses an `ImagePullPolicy` of `PullIfNotPresent`](https://github.com/openshift/oc/issues/2029) so if you were to use `--image=quay.io/ibm/kubernetes-must-gather:latest` once, then you could not get a newer version of the `latest` image in the same cluster unless you manually deleted that image from the internal image registry.
 
 ## Files
 
