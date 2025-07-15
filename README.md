@@ -45,7 +45,7 @@ Extra output is in the download at `must-gather.local.*/quay-io-ibm-kubernetes-m
 
 ## Notes
 
-We generally recommend using a specific tag rather than `latest` because `oc adm must-gather` [uses an `ImagePullPolicy` of `PullIfNotPresent`](https://github.com/openshift/oc/issues/2029) so if you were to use `--image=quay.io/ibm/kubernetes-must-gather:latest` once, then you could not get a newer version of the `latest` image in the same cluster unless you manually deleted that image from the internal image registry. Consult the [latest release](https://github.com/IBM/kubernetes-must-gather/releases/latest) to find the latest version.
+We generally recommend using a specific tag rather than `latest` because `oc adm must-gather` [uses an `ImagePullPolicy` of `PullIfNotPresent`](https://github.com/openshift/oc/issues/2029) so if you were to use `--image=quay.io/ibm/kubernetes-must-gather:latest` once, then you could not get a newer version of the `latest` image in the same cluster unless you manually deleted that image from the internal image registry. Consult the tag of the [latest release](https://github.com/IBM/kubernetes-must-gather/releases/latest) (e.g. 0.1.20250715013) to use a specific version.
 
 ---
 
