@@ -5,7 +5,7 @@
 
 PROJECT_NAME="kubernetes-must-gather"
 SCRIPT_NAME="$(basename "${0}")"
-VERSION="0.1.20250702006"
+VERSION="0.1.20250715001"
 MGOUTPUT="must-gather"
 EXTRADEBUG=${EXTRADEBUG:-false}
 declare -A OPTIONS=()

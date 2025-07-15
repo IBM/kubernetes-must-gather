@@ -45,6 +45,11 @@ We generally recommend using a specific tag rather than `latest` because `oc adm
 
 ### Steps to build locally and publish to an OpenShift registry
 
+1. Update the `VERSION=` line in `gather`
+1. Set a variable to this version in your shell:
+   ```
+   export VERSION="..."
+   ```
 1. Build the image for your cluster platform; for example:
    ```
    podman build --platform linux/amd64 -t kubernetes-must-gather .
@@ -53,29 +58,17 @@ We generally recommend using a specific tag rather than `latest` because `oc adm
    ```
    REGISTRY=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
    ```
-1. Find the local image ID:
-   ```
-   IMAGE_ID=$(podman images | grep "localhost/kubernetes-must-gather" | awk '{print $3}')
-   ```
-1. Set a unique version of the image:
-   ```
-   VERSION="..."
-   ```
 1. Set the namespace/project to push the image to (make sure this namespace exists):
    ```
    NAMESPACE="customimages"
    ```
 1. Login to your remote image registry with podman:
    ```
-   podman login ${REGISTRY}
-   ```
-1. Tag the local image for the remote image registry:
-   ```
-   podman tag ${IMAGE_ID} ${REGISTRY}/${NAMESPACE}/kubernetes-must-gather:${VERSION}
+   podman login --tls-verify=false -u $(oc whoami | sed 's/://g') -p $(oc whoami -t) ${REGISTRY}
    ```
 1. Push the image to the remote image registry (may require [exposing the registry](https://docs.openshift.com/container-platform/latest/registry/securing-exposing-registry.html)):
    ```
-   podman push ${IMAGE_ID} ${REGISTRY}/${NAMESPACE}/kubernetes-must-gather:${VERSION}
+   podman push --tls-verify=false localhost/kubernetes-must-gather:latest ${REGISTRY}/${NAMESPACE}/kubernetes-must-gather:${VERSION}
    ```
 1. Use the image. For example:
    ```
@@ -87,7 +80,7 @@ We generally recommend using a specific tag rather than `latest` because `oc adm
 1. Update the `VERSION=` line in `gather`
 1. Set a variable to this version in your shell:
    ```
-   VERSION="..."
+   export VERSION="..."
    ```
 1. Create the manifest (error if it exists is okay):
    ```
