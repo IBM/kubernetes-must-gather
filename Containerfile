@@ -4,7 +4,7 @@
 
 FROM registry.access.redhat.com/ubi9/ubi:latest
 
-RUN dnf install -y jq git && \
+RUN dnf install -y jq git rsync && \
     dnf clean all && \
     curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest/openshift-client-linux-$(uname -m | sed 's/aarch64/arm64/g' | sed 's/x86_64/amd64/g')-rhel9.tar.gz && \
     tar -xvzf openshift-client-linux*.tar.gz -C /usr/local/bin oc && \

@@ -7,7 +7,7 @@
 ### Basic usage
 
 ```
-oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250702006
+oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest
 ```
 
 ### Customized usage
@@ -22,18 +22,26 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250702006
 #### Usage help
 
 ```
-oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:0.1.20250702006 -- gather -h
+oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- gather -h
+```
+
+#### Running with verbose logging
+
+```
+oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- gather --log=2
 ```
 
 #### oc adm must-gather collection-scripts
 
-`kubernetes-must-gather` can run any of the other collection scripts available in the upstream `oc adm must-gather` [collection-scripts](https://github.com/openshift/must-gather/tree/main/collection-scripts). Just pass `--` and the name of the script (multiple allowed and they're executed in sequence). For example, to run `gather_apirequestcounts`:
+`kubernetes-must-gather` can run any of the other collection scripts available in the upstream `oc adm must-gather` [collection-scripts](https://github.com/openshift/must-gather/tree/main/collection-scripts). Just pass `--` and the name of the script (multiple allowed and they're executed in sequence).
+
+For example, to run [`gather_apirequestcounts`](https://github.com/openshift/must-gather/blob/main/collection-scripts/gather_apirequestcounts):
 
 ```
 oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- gather --gather_apirequestcounts
 ```
 
-This calls <https://github.com/openshift/must-gather/blob/main/collection-scripts/gather_apirequestcounts> and extra output is in the download at `must-gather.local.*/quay-io-ibm-kubernetes-must-gather*/requests/`
+Extra output is in the download at `must-gather.local.*/quay-io-ibm-kubernetes-must-gather*/requests/`
 
 ## Notes
 
@@ -50,6 +58,10 @@ We generally recommend using a specific tag rather than `latest` because `oc adm
    ```
    export VERSION="..."
    ```
+1. Set the namespace/project to push the image to (make sure this namespace exists):
+   ```
+   export NAMESPACE="customimages"
+   ```
 1. Build the image for your cluster platform; for example:
    ```
    podman build --platform linux/amd64 -t kubernetes-must-gather .
@@ -57,10 +69,6 @@ We generally recommend using a specific tag rather than `latest` because `oc adm
 1. Get your cluster registry URL:
    ```
    REGISTRY=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')
-   ```
-1. Set the namespace/project to push the image to (make sure this namespace exists):
-   ```
-   NAMESPACE="customimages"
    ```
 1. Login to your remote image registry with podman:
    ```
@@ -119,7 +127,6 @@ We generally recommend using a specific tag rather than `latest` because `oc adm
    ```
    oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest
    ```
-1. If all looks good, update the version above in the README.
 
 ## Files
 

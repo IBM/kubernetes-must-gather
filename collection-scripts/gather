@@ -5,7 +5,7 @@
 
 PROJECT_NAME="kubernetes-must-gather"
 SCRIPT_NAME="$(basename "${0}")"
-VERSION="0.1.20250715001"
+VERSION="0.1.20250715012"
 MGOUTPUT="must-gather"
 EXTRADEBUG=${EXTRADEBUG:-false}
 declare -A OPTIONS=()
@@ -49,6 +49,7 @@ declare -A OPTIONS_SHORTFLAGS=(
 ## Descriptions should always start with 'Enable '
 declare -A OPTIONS_BOOLEANS_DESCRIPTIONS=(
   [logs-crashloopbackoff]="Enable gathering pod logs of pods in CrashLoopBackOff state"
+  [logs-etcd]="Enable gathering pod logs of etcd pods"
   [help]="Enable display of help/usage"
   [usage]="Enable display of help/usage"
 )
@@ -73,6 +74,7 @@ done
 OPTIONS[help]=false
 OPTIONS[log]=1
 OPTIONS[logs-crashloopbackoff]=true
+OPTIONS[logs-etcd]=false
 OPTIONS[usage]=false
 
 # Flag defaults
@@ -304,6 +306,9 @@ echoWithoutPrefix "${FINAL_OPTIONS}"
 ensureAllPodsJSON() {
   if [ "${ALL_PODS_JSON}" = "" ]; then
     ALL_PODS_JSON="$(oc get pods -A -o json)"
+
+    # This is too heavy and causes issues with oc
+    #echoVerbose "ALL_PODS_JSON = ${ALL_PODS_JSON}"
   fi
 }
 
@@ -315,7 +320,7 @@ getPodLogs() {
   containers=$(oc get pod "$pod" -n "$ns" -o jsonpath='{.spec.containers[*].name}')
 
   for container in $containers; do
-    echoInfo "Collecting CrashLoopBackOff pod logs for $ns/$pod [$container]"
+    echoInfo "Collecting pod logs for $ns/$pod [$container]"
 
     # The main oc adm inspect for all namespaces creates a directory structure like:
     # 
@@ -353,6 +358,20 @@ getPodLogs() {
   done
 }
 
+getPodLogsByAppName() {
+  SEARCH="${1}"
+  echoInfo "Started getPodLogsByAppName for ${SEARCH}"
+  ensureAllPodsJSON
+  INPUT="$(echo "${ALL_PODS_JSON}" | jq -r ".items[] | select(.metadata.labels.app == \"${SEARCH}\") | [.metadata.namespace, .metadata.name] | @tsv")"
+  echoVerbose "Pods = ${INPUT}"
+  if [ "${INPUT}" != "" ]; then
+    while IFS=$'\t' read -r ns pod; do
+      getPodLogs "${ns}" "${pod}"
+    done <<< "${INPUT}" # Piping into the while loop would be a subshell and would lose any variable updates (e.g. pids)
+  fi
+  echoInfo "Finished getPodLogsByAppName for ${SEARCH}"
+}
+
 # Store PIDs of all the subprocesses
 pids=()
 
@@ -378,12 +397,22 @@ pids+=($!)
 echoInfo "Sparked off main oc adm inspect; PIDs = ${pids[@]}"
 
 if [ ${OPTIONS[logs-crashloopbackoff]} = true ]; then
-  echoInfo "Checking for CrashLoopBackOff pods"
+  echoInfo "Started checking for CrashLoopBackOff pods"
   ensureAllPodsJSON
   INPUT="$(echo "${ALL_PODS_JSON}" | jq -r '.items[] | select(.status.containerStatuses[]?.state.waiting?.reason == "CrashLoopBackOff") | [.metadata.namespace, .metadata.name] | @tsv')"
-  while IFS=$'\t' read -r ns pod; do
-    getPodLogs "${ns}" "${pod}"
-  done <<< "${INPUT}" # Piping into the while loop would be a subshell and would lose any variable updates (e.g. pids)
+  if [ "${INPUT}" != "" ]; then
+    while IFS=$'\t' read -r ns pod; do
+      getPodLogs "${ns}" "${pod}"
+    done <<< "${INPUT}" # Piping into the while loop would be a subshell and would lose any variable updates (e.g. pids)
+  fi
+  echoInfo "Finished checking for CrashLoopBackOff pods"
+fi
+
+if [ ${OPTIONS[logs-etcd]} = true ]; then
+  echoInfo "Started checking for etcd pod logs"
+  getPodLogsByAppName "etcd"
+  getPodLogsByAppName "etcd-operator"
+  echoInfo "Finished checking for etcd pod logs"
 fi
 
 echoInfo "Checking if we should call any included scripts"
