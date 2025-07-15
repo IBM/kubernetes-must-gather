@@ -130,6 +130,7 @@ We generally recommend using a specific tag rather than `latest` because `oc adm
 1. If everything looks good
     1. Add and push a tag:
        ```
+       git tag $VERSION
        ```
     2. Then find this new tag in [the tag list](https://github.com/IBM/kubernetes-must-gather/tags), click the ellipses, click Create release, and then create a new release.
 
