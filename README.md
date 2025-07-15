@@ -25,11 +25,11 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest
 oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- gather -h
 ```
 
-#### Running with verbose logging
+#### Common flags
 
-```
-oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- gather --log=2
-```
+* Gather `etcd` pod logs: `--logs-etcd`
+* Disable gathering CrashLoopBackOff pod logs: `--no-logs-crashloopbackoff`
+* Enable verbose logging: `--log=2`
 
 #### oc adm must-gather collection-scripts
 
