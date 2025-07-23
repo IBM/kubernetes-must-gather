@@ -135,7 +135,7 @@ getPodLogs() {
 
     # Also copy in the YAML
     oc get pod -o yaml -n "${ns}" "${pod}" > "${MGOUTPUT}/namespaces/${ns}/pods/${pod}/${pod}.yaml" &
-    BACKGROUND_PIDS+=($!)
+    queuedBackground $!
 
     echoVerbose "Sparked off oc get pod ${ns}/${pod}; BACKGROUND_PIDS = ${BACKGROUND_PIDS[@]}"
 
