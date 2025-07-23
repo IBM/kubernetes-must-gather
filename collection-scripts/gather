@@ -9,70 +9,9 @@ source "$(dirname "${0}")/utilities/cmdline.sh"
 
 run() {
   startRun
-
   setDefaultFlags
   processCommandLine "${@}"
-
-  # resource groups list
-  group_resources=(nodes pods events securitycontextconstraints)
-
-  filtered_group_resources=()
-  for gr in "${group_resources[@]}"
-  do
-    oc get "$gr" > /dev/null 2>&1
-    if [[ "$?" -eq 0 ]]; then
-      filtered_group_resources+=("$gr")
-    fi
-  done
-
-  group_resources_text=$(IFS=, ; echo "${filtered_group_resources[*]}")
-
-  echoInfo "Calling main oc adm inspect with ${group_resources_text}"
-
-  oc adm inspect --dest-dir "${MGOUTPUT}" --rotated-pod-logs "${group_resources_text}" --all-namespaces &
-  queuedBackground $!
-
-  echoInfo "Sparked off main oc adm inspect; BACKGROUND_PIDS = ${BACKGROUND_PIDS[@]}"
-
-  if [ ${OPTIONS[all-pods-json]} = true ]; then
-    ensureAllPodsJSON
-  fi
-
-  if [ ${OPTIONS[logs-crashloopbackoff]} = true ]; then
-    echoInfo "Started checking for CrashLoopBackOff pods"
-    ensureAllPodsJSON
-    INPUT="$(echo "${ALL_PODS_JSON}" | jq -r '.items[] | select(.status.containerStatuses[]?.state.waiting?.reason == "CrashLoopBackOff") | [.metadata.namespace, .metadata.name] | @tsv')"
-    if [ "${INPUT}" != "" ]; then
-      while IFS=$'\t' read -r ns pod; do
-        getPodLogs "${ns}" "${pod}"
-      done <<< "${INPUT}" # Piping into the while loop would be a subshell and would lose any variable updates (e.g. BACKGROUND_PIDS)
-    fi
-    echoInfo "Finished checking for CrashLoopBackOff pods"
-  fi
-
-  if [ ${OPTIONS[logs-etcd]} = true ]; then
-    echoInfo "Started checking for etcd pod logs"
-    getPodLogsByAppName "etcd"
-    getPodLogsByAppName "etcd-operator"
-    echoInfo "Finished checking for etcd pod logs"
-  fi
-
-  echoInfo "Checking if we should call any included scripts"
-
-  CURRENT_SCRIPT="$(basename "${0}")"
-  for OTHER_SCRIPT in $(ls /usr/bin/gather*); do
-    OTHER_SCRIPT_NAME="$(basename "${OTHER_SCRIPT}")"
-    if [ "${OTHER_SCRIPT_NAME}" != "${CURRENT_SCRIPT}" ]; then
-      echoVerbose "Other script ${OTHER_SCRIPT_NAME} = ${OPTIONS[${OTHER_SCRIPT_NAME}]}"
-      if [ ${OPTIONS[${OTHER_SCRIPT_NAME}]} = true ]; then
-        echoInfo "Executing script ${OTHER_SCRIPT_NAME}"
-        #export BASE_COLLECTION_PATH="${MGOUTPUT}"
-        /bin/bash "${OTHER_SCRIPT}"
-        echoInfo "Finished executing ${OTHER_SCRIPT_NAME}"
-      fi
-    fi
-  done
-
+  defaultProcessing
   endRun
 }
 
