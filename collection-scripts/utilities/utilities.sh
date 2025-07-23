@@ -2,7 +2,6 @@
 # Copyright IBM Corporation. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-VERSION="0.1.20250723021"
 MGOUTPUT="/must-gather"
 BACKGROUND_PIDS=()
 TEE_FILE="${MGOUTPUT}/kubernetes-must-gather.log"
@@ -25,30 +24,30 @@ echoInfo() {
   echo "$(echoPrefix) ${@}"
 }
 
-# Same as echoInfo but only does anything if the log level is greater than 1
+# Same as echoInfo but only does anything if the log level is greater than or equal to 2
 echoVerbose() {
-  if [ ${OPTIONS[log]} -gt 1 ]; then
+  if [ ${OPTIONS[log]} -ge 2 ]; then
     echoInfo "${@}"
   fi
 }
 
 # Same as echoInfo but only does anything if the log level is greater than or equal to 3
 echoVerbose3() {
-  if [ ${OPTIONS[log]} -gt 1 ]; then
+  if [ ${OPTIONS[log]} -ge 3 ]; then
     echoInfo "${@}"
   fi
 }
 
 # Same as echoInfo but only does anything if the log level is greater than or equal to 3
 echoVerbose4() {
-  if [ ${OPTIONS[log]} -gt 1 ]; then
+  if [ ${OPTIONS[log]} -ge 4 ]; then
     echoInfo "${@}"
   fi
 }
 
 # Same as echoInfo but only does anything if the log level is greater than or equal to 3
 echoVerbose5() {
-  if [ ${OPTIONS[log]} -gt 1 ]; then
+  if [ ${OPTIONS[log]} -ge 5 ]; then
     echoInfo "${@}"
   fi
 }
@@ -210,7 +209,7 @@ defaultProcessing() {
   for OTHER_SCRIPT in $(ls /usr/bin/gather*); do
     OTHER_SCRIPT_NAME="$(basename "${OTHER_SCRIPT}")"
     if [ "${OTHER_SCRIPT_NAME}" != "${CURRENT_SCRIPT}" ]; then
-      echoVerbose "Other script ${OTHER_SCRIPT_NAME} = ${OPTIONS[${OTHER_SCRIPT_NAME}]}"
+      echoVerbose3 "Other script ${OTHER_SCRIPT_NAME} = ${OPTIONS[${OTHER_SCRIPT_NAME}]}"
       if [ ${OPTIONS[${OTHER_SCRIPT_NAME}]} = true ]; then
         echoInfo "Executing script ${OTHER_SCRIPT_NAME}"
         #export BASE_COLLECTION_PATH="${MGOUTPUT}"

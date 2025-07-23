@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright IBM Corporation. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
@@ -45,9 +45,20 @@ setDefaultFlags() {
 processCommandLine() {
   getopt --test 2> /dev/null
   if [ $? -ne 4 ]; then
-      echoInfo "Enhanced getopt is required" >/dev/stderr
-      exit 1
+    echoInfo "Enhanced getopt is required" >/dev/stderr
+    exit 1
   fi
+
+  echoInfo "processCommandLine:" "${@}"
+
+  # Search specifically for --log=N because we might want logging of command line processing itself
+  for arg; do
+    case "$arg" in
+      --log=*)
+        OPTIONS[log]=${arg#--log=}
+        ;;
+    esac
+  done
 
   CURRENT_SCRIPT="$(basename "${0}")"
   for OTHER_SCRIPT in $(ls /usr/bin/gather*); do

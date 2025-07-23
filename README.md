@@ -53,7 +53,7 @@ We generally recommend using a specific tag rather than `latest` because `oc adm
 
 ### Steps to build locally and publish to an OpenShift registry
 
-1. Update the `VERSION=` line in `gather`
+1. Update the `VERSION=` line in `version.sh`
 1. Set a variable to this version in your shell:
    ```
    export VERSION="..."
@@ -85,7 +85,7 @@ We generally recommend using a specific tag rather than `latest` because `oc adm
 
 ### Steps to publish a new image to Quay
 
-1. Update the `VERSION=` line in `gather`
+1. Update the `VERSION=` line in `version.sh`
 1. Set a variable to this version in your shell:
    ```
    export VERSION="..."

@@ -2,10 +2,12 @@
 # Copyright IBM Corporation. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+SCRIPT_DIR="$(dirname "${0}")"
 SCRIPT_NAME="$(basename "${0}")"
 
-source "$(dirname "${0}")/utilities/utilities.sh"
-source "$(dirname "${0}")/utilities/cmdline.sh"
+source "${SCRIPT_DIR}/utilities/version.sh"
+source "${SCRIPT_DIR}/utilities/utilities.sh"
+source "${SCRIPT_DIR}/utilities/cmdline.sh"
 
 run() {
   startRun
