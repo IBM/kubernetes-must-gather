@@ -16,9 +16,6 @@ run() {
   setDefaultFlags
   processCommandLine "${@}"
 
-  # Store PIDs of all the subprocesses
-  pids=()
-
   # resource groups list
   group_resources=(nodes pods events securitycontextconstraints)
 
@@ -36,9 +33,9 @@ run() {
   echoInfo "Calling main oc adm inspect with ${group_resources_text}"
 
   oc adm inspect --dest-dir "${MGOUTPUT}" --rotated-pod-logs "${group_resources_text}" --all-namespaces &
-  pids+=($!)
+  queuedBackground $!
 
-  echoInfo "Sparked off main oc adm inspect; PIDs = ${pids[@]}"
+  echoInfo "Sparked off main oc adm inspect; BACKGROUND_PIDS = ${BACKGROUND_PIDS[@]}"
 
   if [ ${OPTIONS[all-pods-json]} = true ]; then
     ensureAllPodsJSON
@@ -51,7 +48,7 @@ run() {
     if [ "${INPUT}" != "" ]; then
       while IFS=$'\t' read -r ns pod; do
         getPodLogs "${ns}" "${pod}"
-      done <<< "${INPUT}" # Piping into the while loop would be a subshell and would lose any variable updates (e.g. pids)
+      done <<< "${INPUT}" # Piping into the while loop would be a subshell and would lose any variable updates (e.g. BACKGROUND_PIDS)
     fi
     echoInfo "Finished checking for CrashLoopBackOff pods"
   fi
@@ -78,13 +75,6 @@ run() {
       fi
     fi
   done
-
-  # Check if PID array has any values, if so, wait for them to finish
-  echoInfo "Final PIDs array: [${pids[@]}]"
-  if [ ${#pids[@]} -ne 0 ]; then
-    echoInfo "Waiting on subprocesses to finish execution."
-    wait "${pids[@]}"
-  fi
 
   endRun
 }

@@ -1,6 +1,7 @@
 #!/bin/bash
 
-VERSION="0.1.20250723018"
+VERSION="0.1.20250723020"
+BACKGROUND_PIDS=()
 
 outputPrefix() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S.%N %Z')]"
@@ -65,7 +66,18 @@ startRun() {
   echoInfo "Started $(basename "${0}")"
 }
 
+queuedBackground() {
+  BACKGROUND_PIDS+=($1)
+}
+
 endRun() {
+
+  # Check if PID array has any values, if so, wait for them to finish
+  echoInfo "Waiting on BACKGROUND_PIDS array: [${BACKGROUND_PIDS[@]}]"
+  if [ ${#BACKGROUND_PIDS[@]} -ne 0 ]; then
+    wait "${BACKGROUND_PIDS[@]}"
+  fi
+
   echoInfo "Finished $(basename "${0}")"
 
   # force disk flush to ensure that all data gathered is accessible in the copy container
@@ -120,9 +132,9 @@ getPodLogs() {
 
     # Also copy in the YAML
     oc get pod -o yaml -n "${ns}" "${pod}" > "${MGOUTPUT}/namespaces/${ns}/pods/${pod}/${pod}.yaml" &
-    pids+=($!)
+    BACKGROUND_PIDS+=($!)
 
-    echoVerbose "Sparked off oc get pod ${ns}/${pod}; PIDs = ${pids[@]}"
+    echoVerbose "Sparked off oc get pod ${ns}/${pod}; BACKGROUND_PIDS = ${BACKGROUND_PIDS[@]}"
 
     oc logs --timestamps "$pod" -c "$container" -n "$ns" > "${OUTDIR}/current.log"
     oc logs --timestamps "$pod" -c "$container" --previous -n "$ns" > "${OUTDIR}/previous.log"
@@ -138,7 +150,7 @@ getPodLogsByAppName() {
   if [ "${INPUT}" != "" ]; then
     while IFS=$'\t' read -r ns pod; do
       getPodLogs "${ns}" "${pod}"
-    done <<< "${INPUT}" # Piping into the while loop would be a subshell and would lose any variable updates (e.g. pids)
+    done <<< "${INPUT}" # Piping into the while loop would be a subshell and would lose any variable updates (e.g. BACKGROUND_PIDS)
   fi
   echoInfo "Finished getPodLogsByAppName for ${SEARCH}"
 }
