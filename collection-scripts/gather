@@ -1,11 +1,8 @@
 #!/bin/bash
 # Copyright IBM Corporation. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
-# Assisted by watsonx Code Assistant
 
 SCRIPT_NAME="$(basename "${0}")"
-MGOUTPUT="/must-gather"
-TEE_FILE="${MGOUTPUT}/kubernetes-must-gather.log"
 
 source "$(dirname "${0}")/utilities/utilities.sh"
 source "$(dirname "${0}")/utilities/cmdline.sh"

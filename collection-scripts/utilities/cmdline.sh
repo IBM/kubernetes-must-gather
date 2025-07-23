@@ -1,4 +1,6 @@
 #!/bin/sh
+# Copyright IBM Corporation. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 declare -A OPTIONS=()
 declare -A OPTIONS_BOOLEANS_DESCRIPTIONS=()

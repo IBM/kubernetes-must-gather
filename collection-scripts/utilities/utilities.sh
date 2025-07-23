@@ -1,7 +1,11 @@
 #!/bin/bash
+# Copyright IBM Corporation. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 VERSION="0.1.20250723020"
+MGOUTPUT="/must-gather"
 BACKGROUND_PIDS=()
+TEE_FILE="${MGOUTPUT}/kubernetes-must-gather.log"
 
 outputPrefix() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S.%N %Z')]"
@@ -63,7 +67,7 @@ echoLargeVerbose() {
 }
 
 startRun() {
-  echoInfo "Started $(basename "${0}")"
+  echoInfo "Started $(basename "${0}"); version ${VERSION}"
 }
 
 queuedBackground() {
@@ -154,5 +158,3 @@ getPodLogsByAppName() {
   fi
   echoInfo "Finished getPodLogsByAppName for ${SEARCH}"
 }
-
-echoInfo "Utilities loaded. Version ${VERSION}."
