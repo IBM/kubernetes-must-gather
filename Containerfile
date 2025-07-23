@@ -1,7 +1,6 @@
 # Copyright IBM Corporation. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 # Assisted by watsonx Code Assistant
-
 FROM registry.access.redhat.com/ubi9/ubi:latest
 
 RUN dnf install -y jq git rsync && \
