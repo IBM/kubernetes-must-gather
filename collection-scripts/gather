@@ -5,130 +5,334 @@
 
 PROJECT_NAME="kubernetes-must-gather"
 SCRIPT_NAME="$(basename "${0}")"
-VERSION="0.1.20250715013"
+VERSION="0.1.20250723006"
 MGOUTPUT="must-gather"
 EXTRADEBUG=${EXTRADEBUG:-false}
 declare -A OPTIONS=()
 
-echoPrefix() {
-  echo "[$(date '+%Y-%m-%d %H:%M:%S.%N %Z')] ${PROJECT_NAME} ${SCRIPT_NAME}:"
-}
-
+# An echo with a prefix that has a timestamp, script name, etc.
+# Output is also printed to ${PROJECT_NAME}.log in the collection
 echoInfo() {
-  echo "$(echoPrefix) ${@}" | tee -a "${MGOUTPUT}/${PROJECT_NAME}.log"
+  echo "$(echoPrefix) ${@}"
 }
 
-echoWithoutPrefix() {
-  echo "${@}" | tee -a "${MGOUTPUT}/${PROJECT_NAME}.log"
-}
-
+# Same as echoInfo but only does anything if the log level is greater than 1
 echoVerbose() {
   if [ ${OPTIONS[log]} -gt 1 ]; then
     echoInfo "${@}"
   fi
 }
 
-echoInfo "Version ${VERSION}. Options passed: " "${@}"
+# Writes directly to ${PROJECT_NAME}.log in the collection rather
+# than stdout because we've seen large writes cause issues with oc adm must-gather somtimes.
+echoLarge() {
+  echo "$(echoPrefix) ${@}" >> "${MGOUTPUT}/${PROJECT_NAME}.log"
+}
 
-getopt --test 2> /dev/null
-if [ $? -ne 4 ]; then
-    echoInfo "Enhanced getopt is required" >/dev/stderr
-    exit 1
-fi
-
-# Optional short-hand flags for options
-declare -A OPTIONS_SHORTFLAGS=(
-  [help]=h
-  [log]=v
-  [logs-crashloopbackoff]=c
-  [usage]=u
-)
-
-# Option descriptions. Do not end with a period.
-
-## Descriptions should always start with 'Enable '
-declare -A OPTIONS_BOOLEANS_DESCRIPTIONS=(
-  [logs-crashloopbackoff]="Enable gathering pod logs of pods in CrashLoopBackOff state"
-  [logs-etcd]="Enable gathering pod logs of etcd pods"
-  [help]="Enable display of help/usage"
-  [usage]="Enable display of help/usage"
-)
-
-declare -A OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS=(
-)
-
-declare -A OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS=(
-  [log]="Script log level from 0-2 (higher is more verbose)"
-)
-
-CURRENT_SCRIPT="$(basename "${0}")"
-for OTHER_SCRIPT in $(ls /usr/bin/gather*); do
-  OTHER_SCRIPT="$(basename "${OTHER_SCRIPT}")"
-  if [ "${OTHER_SCRIPT}" != "${CURRENT_SCRIPT}" ]; then
-    OPTIONS[${OTHER_SCRIPT}]=false
-    OPTIONS_BOOLEANS_DESCRIPTIONS[${OTHER_SCRIPT}]="Enable execution of ${OTHER_SCRIPT}. See https://github.com/openshift/must-gather/blob/main/collection-scripts/${OTHER_SCRIPT}"
+# Same as echoLarge but only does anything if the log level is greater than 1
+echoLargeVerbose() {
+  if [ ${OPTIONS[log]} -gt 1 ]; then
+    echoLarge "${@}"
   fi
-done
+}
 
-# Set option defaults
-OPTIONS[help]=false
-OPTIONS[log]=1
-OPTIONS[logs-crashloopbackoff]=true
-OPTIONS[logs-etcd]=false
-OPTIONS[usage]=false
+run() {
+  echoInfo "Version ${VERSION}. Options passed: " "${@}"
 
-# Flag defaults
-declare -A OPTIONS_FLAGS_ARG_NOT_REQUIRED_DEFAULTS=(
-  [log]=2
-)
-
-# For boolean options, do not add a --no- option
-declare -A OPTIONS_BOOLEANS_SKIPNO=(
-  [usage]=true
-  [help]=true
-)
-
-# Option pre-processing (e.g. add no- flags)
-for OPTION in "${!OPTIONS_BOOLEANS_DESCRIPTIONS[@]}"; do
-  if ! [[ -v OPTIONS_BOOLEANS_SKIPNO[${OPTION}] ]]; then
-    OPTIONS_BOOLEANS_DESCRIPTIONS["no-${OPTION}"]="Disable ${OPTIONS_BOOLEANS_DESCRIPTIONS[${OPTION}]#Enable }"
-  fi
-done
-
-# Option processing
-
-GETOPTS_SHORT=""
-GETOPTS_LONG=""
-for OPTION in "${!OPTIONS[@]}"; do
-  if [ "${GETOPTS_LONG}" != "" ]; then
-    GETOPTS_LONG="${GETOPTS_LONG},"
-  fi
-  GETOPTS_LONG="${GETOPTS_LONG}${OPTION}"
-  if [[ -v OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS[${OPTION}] ]]; then
-    GETOPTS_LONG="${GETOPTS_LONG}:"
-  elif [[ -v OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS[${OPTION}] ]]; then
-    GETOPTS_LONG="${GETOPTS_LONG}::"
+  getopt --test 2> /dev/null
+  if [ $? -ne 4 ]; then
+      echoInfo "Enhanced getopt is required" >/dev/stderr
+      exit 1
   fi
 
-  if [[ -v OPTIONS_BOOLEANS_DESCRIPTIONS[${OPTION}] ]] && ! [[ -v OPTIONS_BOOLEANS_SKIPNO[${OPTION}] ]]; then
-    GETOPTS_LONG="${GETOPTS_LONG},no-${OPTION}"
-  fi
+  # Optional short-hand flags for options
+  declare -A OPTIONS_SHORTFLAGS=(
+    [help]=h
+    [log]=v
+    [logs-crashloopbackoff]=c
+    [usage]=u
+  )
 
-  if [[ -v OPTIONS_SHORTFLAGS[${OPTION}] ]]; then
-    SHORT_FLAG="${OPTIONS_SHORTFLAGS[${OPTION}]}"
-    GETOPTS_SHORT="${GETOPTS_SHORT}${SHORT_FLAG}"
-    if [[ -v OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS[${OPTION}] ]]; then
-      GETOPTS_SHORT="${GETOPTS_SHORT}:"
-    elif [[ -v OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS[${OPTION}] ]]; then
-      GETOPTS_SHORT="${GETOPTS_SHORT}::"
+  # Option descriptions. Do not end with a period.
+
+  ## Descriptions should always start with 'Enable '
+  declare -A OPTIONS_BOOLEANS_DESCRIPTIONS=(
+    [logs-crashloopbackoff]="Enable gathering pod logs of pods in CrashLoopBackOff state"
+    [logs-etcd]="Enable gathering pod logs of etcd pods"
+    [help]="Enable display of help/usage"
+    [usage]="Enable display of help/usage"
+    [all-pods-json]="Enable writing of JSON for all pods"
+  )
+
+  declare -A OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS=(
+  )
+
+  declare -A OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS=(
+    [log]="Script log level from 0-2 (higher is more verbose)"
+  )
+
+  CURRENT_SCRIPT="$(basename "${0}")"
+  for OTHER_SCRIPT in $(ls /usr/bin/gather*); do
+    OTHER_SCRIPT="$(basename "${OTHER_SCRIPT}")"
+    if [ "${OTHER_SCRIPT}" != "${CURRENT_SCRIPT}" ]; then
+      OPTIONS[${OTHER_SCRIPT}]=false
+      OPTIONS_BOOLEANS_DESCRIPTIONS[${OTHER_SCRIPT}]="Enable execution of ${OTHER_SCRIPT}. See https://github.com/openshift/must-gather/blob/main/collection-scripts/${OTHER_SCRIPT}"
     fi
-  fi
-done
+  done
 
-if [ ${EXTRADEBUG} = true ]; then
-  echoInfo "GETOPTS_SHORT = ${GETOPTS_SHORT}"
-  echoInfo "GETOPTS_LONG = ${GETOPTS_LONG}"
-fi
+  # Set option defaults
+  OPTIONS[all-pods-json]=false
+  OPTIONS[help]=false
+  OPTIONS[log]=1
+  OPTIONS[logs-crashloopbackoff]=true
+  OPTIONS[logs-etcd]=false
+  OPTIONS[usage]=false
+
+  # Flag defaults
+  declare -A OPTIONS_FLAGS_ARG_NOT_REQUIRED_DEFAULTS=(
+    [log]=2
+  )
+
+  # For boolean options, do not add a --no- option
+  declare -A OPTIONS_BOOLEANS_SKIPNO=(
+    [usage]=true
+    [help]=true
+  )
+
+  # Option pre-processing (e.g. add no- flags)
+  for OPTION in "${!OPTIONS_BOOLEANS_DESCRIPTIONS[@]}"; do
+    if ! [[ -v OPTIONS_BOOLEANS_SKIPNO[${OPTION}] ]]; then
+      OPTIONS_BOOLEANS_DESCRIPTIONS["no-${OPTION}"]="Disable ${OPTIONS_BOOLEANS_DESCRIPTIONS[${OPTION}]#Enable }"
+    fi
+  done
+
+  # Option processing
+
+  GETOPTS_SHORT=""
+  GETOPTS_LONG=""
+  for OPTION in "${!OPTIONS[@]}"; do
+    if [ "${GETOPTS_LONG}" != "" ]; then
+      GETOPTS_LONG="${GETOPTS_LONG},"
+    fi
+    GETOPTS_LONG="${GETOPTS_LONG}${OPTION}"
+    if [[ -v OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS[${OPTION}] ]]; then
+      GETOPTS_LONG="${GETOPTS_LONG}:"
+    elif [[ -v OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS[${OPTION}] ]]; then
+      GETOPTS_LONG="${GETOPTS_LONG}::"
+    fi
+
+    if [[ -v OPTIONS_BOOLEANS_DESCRIPTIONS[${OPTION}] ]] && ! [[ -v OPTIONS_BOOLEANS_SKIPNO[${OPTION}] ]]; then
+      GETOPTS_LONG="${GETOPTS_LONG},no-${OPTION}"
+    fi
+
+    if [[ -v OPTIONS_SHORTFLAGS[${OPTION}] ]]; then
+      SHORT_FLAG="${OPTIONS_SHORTFLAGS[${OPTION}]}"
+      GETOPTS_SHORT="${GETOPTS_SHORT}${SHORT_FLAG}"
+      if [[ -v OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS[${OPTION}] ]]; then
+        GETOPTS_SHORT="${GETOPTS_SHORT}:"
+      elif [[ -v OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS[${OPTION}] ]]; then
+        GETOPTS_SHORT="${GETOPTS_SHORT}::"
+      fi
+    fi
+  done
+
+  if [ ${EXTRADEBUG} = true ]; then
+    echoInfo "GETOPTS_SHORT = ${GETOPTS_SHORT}"
+    echoInfo "GETOPTS_LONG = ${GETOPTS_LONG}"
+  fi
+
+  # https://www.kernel.org/doc/man-pages/online/pages/man1/getopt.1.html
+  PARSED=$(getopt --alternative --options "-${GETOPTS_SHORT}" --longoptions "${GETOPTS_LONG}" --name "$0" -- "$@")
+  if [ $? -ne 0 ]; then
+    # Invalid argument and getopt printed the error
+    exit 2
+  fi
+
+  eval set -- "${PARSED}"
+
+  POSITIONAL_ARGS=()
+
+  if [ ${EXTRADEBUG} = true ]; then
+    for arg in "${@}"; do
+      echoInfo "Arg: ${arg}"
+    done
+  fi
+
+  IN_POSITIONAL=false
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --)
+        IN_POSITIONAL=true
+        shift # past this argument
+        ;;
+      --*)
+        OPTION="${1}"
+        shift # past this argument
+
+        if [ ${IN_POSITIONAL} = false ]; then
+          if [[ -v OPTIONS_BOOLEANS_DESCRIPTIONS["${OPTION#--}"] ]]; then
+            if [ "${OPTION#--no-}" = "${OPTION}" ]; then
+              OPTIONS["${OPTION#--}"]=true
+            else
+              OPTIONS["${OPTION#--no-}"]=false
+            fi
+          else
+            if [[ -v OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
+              OPTIONS["${OPTION#--}"]=$1
+              shift # past this argument
+            elif [[ -v OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
+              if [ "${1}" = "" ]; then
+                OPTIONS["${OPTION#--}"]=${OPTIONS_FLAGS_ARG_NOT_REQUIRED_DEFAULTS[${OPTION}]}
+              else
+                OPTIONS["${OPTION#--}"]=$1
+              fi
+              shift # past this argument
+            fi
+          fi
+        else
+          POSITIONAL_ARGS+=("${OPTION}")
+        fi
+
+        ;;
+      -*)
+        FLAG="${1}"
+        shift # past this argument
+
+        if [ ${IN_POSITIONAL} = false ]; then
+          OPTION=""
+          for LONGFLAG in "${!OPTIONS_SHORTFLAGS[@]}"; do
+            SHORTFLAG="${OPTIONS_SHORTFLAGS[${LONGFLAG}]}"
+            if [ "${FLAG#-}" = "${SHORTFLAG}" ]; then
+              OPTION="${LONGFLAG}"
+            fi
+          done
+
+          if [[ -v OPTIONS_BOOLEANS_DESCRIPTIONS["${OPTION#--}"] ]]; then
+            if [ "${OPTION#--no-}" = "${OPTION}" ]; then
+              OPTIONS["${OPTION#--}"]=true
+            else
+              OPTIONS["${OPTION#--no-}"]=false
+            fi
+          else
+            if [[ -v OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
+              OPTIONS["${OPTION#--}"]=$1
+              shift # past this argument
+            elif [[ -v OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
+              if [ "${1}" = "" ]; then
+                OPTIONS["${OPTION#--}"]=${OPTIONS_FLAGS_ARG_NOT_REQUIRED_DEFAULTS[${OPTION}]}
+              else
+                OPTIONS["${OPTION#--}"]=$1
+              fi
+              shift # past this argument
+            fi
+          fi
+        else
+          POSITIONAL_ARGS+=("${FLAG}")
+        fi
+
+        ;;
+      *)
+        POSITIONAL_ARGS+=("${1}")
+        shift # past this argument
+        ;;
+    esac
+  done
+
+  set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
+
+  if [ ${OPTIONS[usage]} = true ] || [ ${OPTIONS[help]} = true ]; then
+    usage
+  fi
+
+  echoInfo "Final options:"
+  FINAL_OPTIONS="$(printFinalOptions | sort)"
+  echoWithoutPrefix "${FINAL_OPTIONS}"
+
+  # Store PIDs of all the subprocesses
+  pids=()
+
+  # resource groups list
+  group_resources=(nodes pods events securitycontextconstraints)
+
+  filtered_group_resources=()
+  for gr in "${group_resources[@]}"
+  do
+    oc get "$gr" > /dev/null 2>&1
+    if [[ "$?" -eq 0 ]]; then
+      filtered_group_resources+=("$gr")
+    fi
+  done
+
+  group_resources_text=$(IFS=, ; echo "${filtered_group_resources[*]}")
+
+  echoInfo "Calling main oc adm inspect with ${group_resources_text}"
+
+  oc adm inspect --dest-dir "${MGOUTPUT}" --rotated-pod-logs "${group_resources_text}" --all-namespaces &
+  pids+=($!)
+
+  echoInfo "Sparked off main oc adm inspect; PIDs = ${pids[@]}"
+
+  if [ ${OPTIONS[all-pods-json]} = true ]; then
+    ensureAllPodsJSON
+  fi
+
+  if [ ${OPTIONS[logs-crashloopbackoff]} = true ]; then
+    echoInfo "Started checking for CrashLoopBackOff pods"
+    ensureAllPodsJSON
+    INPUT="$(echo "${ALL_PODS_JSON}" | jq -r '.items[] | select(.status.containerStatuses[]?.state.waiting?.reason == "CrashLoopBackOff") | [.metadata.namespace, .metadata.name] | @tsv')"
+    if [ "${INPUT}" != "" ]; then
+      while IFS=$'\t' read -r ns pod; do
+        getPodLogs "${ns}" "${pod}"
+      done <<< "${INPUT}" # Piping into the while loop would be a subshell and would lose any variable updates (e.g. pids)
+    fi
+    echoInfo "Finished checking for CrashLoopBackOff pods"
+  fi
+
+  if [ ${OPTIONS[logs-etcd]} = true ]; then
+    echoInfo "Started checking for etcd pod logs"
+    getPodLogsByAppName "etcd"
+    getPodLogsByAppName "etcd-operator"
+    echoInfo "Finished checking for etcd pod logs"
+  fi
+
+  echoInfo "Checking if we should call any included scripts"
+
+  CURRENT_SCRIPT="$(basename "${0}")"
+  for OTHER_SCRIPT in $(ls /usr/bin/gather*); do
+    OTHER_SCRIPT_NAME="$(basename "${OTHER_SCRIPT}")"
+    if [ "${OTHER_SCRIPT_NAME}" != "${CURRENT_SCRIPT}" ]; then
+      echoVerbose "Other script ${OTHER_SCRIPT_NAME} = ${OPTIONS[${OTHER_SCRIPT_NAME}]}"
+      if [ ${OPTIONS[${OTHER_SCRIPT_NAME}]} = true ]; then
+        echoInfo "Executing script ${OTHER_SCRIPT_NAME}"
+        #export BASE_COLLECTION_PATH="${MGOUTPUT}"
+        /bin/bash "${OTHER_SCRIPT}"
+        echoInfo "Finished executing ${OTHER_SCRIPT_NAME}"
+      fi
+    fi
+  done
+
+  # Check if PID array has any values, if so, wait for them to finish
+  echoInfo "Final PIDs array: [${pids[@]}]"
+  if [ ${#pids[@]} -ne 0 ]; then
+    echoInfo "Waiting on subprocesses to finish execution."
+    wait "${pids[@]}"
+  fi
+
+  echoInfo "Wait completed, peforming final sync"
+
+  # force disk flush to ensure that all data gathered is accessible in the copy container
+  sync
+
+  echoInfo "script finished"
+}
+
+echoPrefix() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S.%N %Z')] ${PROJECT_NAME} ${SCRIPT_NAME}:"
+}
+
+echoWithoutPrefix() {
+  echo "${@}"
+}
 
 usageOptionsUnsorted() {
   for OPTION in "${!OPTIONS_BOOLEANS_DESCRIPTIONS[@]}"; do
@@ -190,125 +394,18 @@ usage() {
   exit 22
 }
 
-# https://www.kernel.org/doc/man-pages/online/pages/man1/getopt.1.html
-PARSED=$(getopt --alternative --options "-${GETOPTS_SHORT}" --longoptions "${GETOPTS_LONG}" --name "$0" -- "$@")
-if [ $? -ne 0 ]; then
-  # Invalid argument and getopt printed the error
-  exit 2
-fi
-
-eval set -- "${PARSED}"
-
-POSITIONAL_ARGS=()
-
-if [ ${EXTRADEBUG} = true ]; then
-  for arg in "${@}"; do
-    echoInfo "Arg: ${arg}"
-  done
-fi
-
-IN_POSITIONAL=false
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --)
-      IN_POSITIONAL=true
-      shift # past this argument
-      ;;
-    --*)
-      OPTION="${1}"
-      shift # past this argument
-
-      if [ ${IN_POSITIONAL} = false ]; then
-        if [[ -v OPTIONS_BOOLEANS_DESCRIPTIONS["${OPTION#--}"] ]]; then
-          if [ "${OPTION#--no-}" = "${OPTION}" ]; then
-            OPTIONS["${OPTION#--}"]=true
-          else
-            OPTIONS["${OPTION#--no-}"]=false
-          fi
-        else
-          if [[ -v OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
-            OPTIONS["${OPTION#--}"]=$1
-            shift # past this argument
-          elif [[ -v OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
-            if [ "${1}" = "" ]; then
-              OPTIONS["${OPTION#--}"]=${OPTIONS_FLAGS_ARG_NOT_REQUIRED_DEFAULTS[${OPTION}]}
-            else
-              OPTIONS["${OPTION#--}"]=$1
-            fi
-            shift # past this argument
-          fi
-        fi
-      else
-        POSITIONAL_ARGS+=("${OPTION}")
-      fi
-
-      ;;
-    -*)
-      FLAG="${1}"
-      shift # past this argument
-
-      if [ ${IN_POSITIONAL} = false ]; then
-        OPTION=""
-        for LONGFLAG in "${!OPTIONS_SHORTFLAGS[@]}"; do
-          SHORTFLAG="${OPTIONS_SHORTFLAGS[${LONGFLAG}]}"
-          if [ "${FLAG#-}" = "${SHORTFLAG}" ]; then
-            OPTION="${LONGFLAG}"
-          fi
-        done
-
-        if [[ -v OPTIONS_BOOLEANS_DESCRIPTIONS["${OPTION#--}"] ]]; then
-          if [ "${OPTION#--no-}" = "${OPTION}" ]; then
-            OPTIONS["${OPTION#--}"]=true
-          else
-            OPTIONS["${OPTION#--no-}"]=false
-          fi
-        else
-          if [[ -v OPTIONS_FLAGS_ARG_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
-            OPTIONS["${OPTION#--}"]=$1
-            shift # past this argument
-          elif [[ -v OPTIONS_FLAGS_ARG_NOT_REQUIRED_DESCRIPTIONS["${OPTION#--}"] ]]; then
-            if [ "${1}" = "" ]; then
-              OPTIONS["${OPTION#--}"]=${OPTIONS_FLAGS_ARG_NOT_REQUIRED_DEFAULTS[${OPTION}]}
-            else
-              OPTIONS["${OPTION#--}"]=$1
-            fi
-            shift # past this argument
-          fi
-        fi
-      else
-        POSITIONAL_ARGS+=("${FLAG}")
-      fi
-
-      ;;
-    *)
-      POSITIONAL_ARGS+=("${1}")
-      shift # past this argument
-      ;;
-  esac
-done
-
-set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
-
-if [ ${OPTIONS[usage]} = true ] || [ ${OPTIONS[help]} = true ]; then
-  usage
-fi
-
 printFinalOptions() {
   for OPTION in "${!OPTIONS[@]}"; do
     echo "  ${OPTION} = ${OPTIONS[${OPTION}]}"
   done
 }
 
-echoInfo "Final options:"
-FINAL_OPTIONS="$(printFinalOptions | sort)"
-echoWithoutPrefix "${FINAL_OPTIONS}"
-
 ensureAllPodsJSON() {
   if [ "${ALL_PODS_JSON}" = "" ]; then
     ALL_PODS_JSON="$(oc get pods -A -o json)"
 
     # This is too heavy and causes issues with oc
-    #echoVerbose "ALL_PODS_JSON = ${ALL_PODS_JSON}"
+    echoLargeVerbose "ALL_PODS_JSON = ${ALL_PODS_JSON}"
   fi
 }
 
@@ -372,75 +469,4 @@ getPodLogsByAppName() {
   echoInfo "Finished getPodLogsByAppName for ${SEARCH}"
 }
 
-# Store PIDs of all the subprocesses
-pids=()
-
-# resource groups list
-group_resources=(nodes pods events securitycontextconstraints)
-
-filtered_group_resources=()
-for gr in "${group_resources[@]}"
-do
-  oc get "$gr" > /dev/null 2>&1
-  if [[ "$?" -eq 0 ]]; then
-    filtered_group_resources+=("$gr")
-  fi
-done
-
-group_resources_text=$(IFS=, ; echo "${filtered_group_resources[*]}")
-
-echoInfo "Calling main oc adm inspect with ${group_resources_text}"
-
-oc adm inspect --dest-dir "${MGOUTPUT}" --rotated-pod-logs "${group_resources_text}" --all-namespaces &
-pids+=($!)
-
-echoInfo "Sparked off main oc adm inspect; PIDs = ${pids[@]}"
-
-if [ ${OPTIONS[logs-crashloopbackoff]} = true ]; then
-  echoInfo "Started checking for CrashLoopBackOff pods"
-  ensureAllPodsJSON
-  INPUT="$(echo "${ALL_PODS_JSON}" | jq -r '.items[] | select(.status.containerStatuses[]?.state.waiting?.reason == "CrashLoopBackOff") | [.metadata.namespace, .metadata.name] | @tsv')"
-  if [ "${INPUT}" != "" ]; then
-    while IFS=$'\t' read -r ns pod; do
-      getPodLogs "${ns}" "${pod}"
-    done <<< "${INPUT}" # Piping into the while loop would be a subshell and would lose any variable updates (e.g. pids)
-  fi
-  echoInfo "Finished checking for CrashLoopBackOff pods"
-fi
-
-if [ ${OPTIONS[logs-etcd]} = true ]; then
-  echoInfo "Started checking for etcd pod logs"
-  getPodLogsByAppName "etcd"
-  getPodLogsByAppName "etcd-operator"
-  echoInfo "Finished checking for etcd pod logs"
-fi
-
-echoInfo "Checking if we should call any included scripts"
-
-CURRENT_SCRIPT="$(basename "${0}")"
-for OTHER_SCRIPT in $(ls /usr/bin/gather*); do
-  OTHER_SCRIPT_NAME="$(basename "${OTHER_SCRIPT}")"
-  if [ "${OTHER_SCRIPT_NAME}" != "${CURRENT_SCRIPT}" ]; then
-    echoVerbose "Other script ${OTHER_SCRIPT_NAME} = ${OPTIONS[${OTHER_SCRIPT_NAME}]}"
-    if [ ${OPTIONS[${OTHER_SCRIPT_NAME}]} = true ]; then
-      echoInfo "Executing script ${OTHER_SCRIPT_NAME}"
-      #export BASE_COLLECTION_PATH="${MGOUTPUT}"
-      /bin/bash "${OTHER_SCRIPT}" 2>&1 | tee -a "${MGOUTPUT}/${PROJECT_NAME}.log"
-      echoInfo "Finished executing ${OTHER_SCRIPT_NAME}"
-    fi
-  fi
-done
-
-# Check if PID array has any values, if so, wait for them to finish
-echoInfo "Final PIDs array: [${pids[@]}]"
-if [ ${#pids[@]} -ne 0 ]; then
-  echoInfo "Waiting on subprocesses to finish execution."
-  wait "${pids[@]}"
-fi
-
-echoInfo "Wait completed, peforming final sync"
-
-# force disk flush to ensure that all data gathered is accessible in the copy container
-sync
-
-echoInfo "script finished"
+run "${@}" 2>&1 | tee -a "${MGOUTPUT}/${PROJECT_NAME}.log"
