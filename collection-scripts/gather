@@ -5,10 +5,12 @@
 
 PROJECT_NAME="kubernetes-must-gather"
 SCRIPT_NAME="$(basename "${0}")"
-VERSION="0.1.20250723006"
+VERSION="0.1.20250723009"
 MGOUTPUT="must-gather"
 EXTRADEBUG=${EXTRADEBUG:-false}
 declare -A OPTIONS=()
+
+source "$(dirname "${0}")/utilities/utilities.sh"
 
 # An echo with a prefix that has a timestamp, script name, etc.
 # Output is also printed to ${PROJECT_NAME}.log in the collection
@@ -327,7 +329,7 @@ run() {
 }
 
 echoPrefix() {
-  echo "[$(date '+%Y-%m-%d %H:%M:%S.%N %Z')] ${PROJECT_NAME} ${SCRIPT_NAME}:"
+  echo "$(outputPrefix) ${PROJECT_NAME} ${SCRIPT_NAME}:"
 }
 
 echoWithoutPrefix() {

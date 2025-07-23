@@ -18,6 +18,6 @@ RUN git clone https://github.com/openshift/must-gather && \
     cp must-gather/collection-scripts/* /usr/bin/
 
 # Now overwrite any of our customizations
-COPY collection-scripts/* /usr/bin/
+COPY collection-scripts/. /usr/bin/
 
 CMD ["/usr/bin/gather"]
