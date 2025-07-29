@@ -56,6 +56,7 @@ setDefaultFlags() {
   OPTIONS[performance-profile]=false
   OPTIONS[osus]=false
   OPTIONS[aro]=false
+  OPTIONS[use-default-options]=false
 
   ## Descriptions should always start with 'Enable '
   OPTIONS_BOOLEANS_DESCRIPTIONS[logs-crashloopbackoff]="Enable gathering pod logs of pods in CrashLoopBackOff state"
@@ -101,6 +102,7 @@ setDefaultFlags() {
   OPTIONS_BOOLEANS_DESCRIPTIONS[performance-profile]="Enable gathering performance profile resources"
   OPTIONS_BOOLEANS_DESCRIPTIONS[osus]="Enable gathering osus resources"
   OPTIONS_BOOLEANS_DESCRIPTIONS[aro]="Enable gathering ARO resources"
+  OPTIONS_BOOLEANS_DESCRIPTIONS[use-default-options]="Enable resetting overridden script options"
 
   # Optional short-hand flags for options
   OPTIONS_SHORTFLAGS[help]=h
@@ -116,6 +118,7 @@ setDefaultFlags() {
   # For boolean options, do not add a --no- option
   OPTIONS_BOOLEANS_SKIPNO[usage]=true
   OPTIONS_BOOLEANS_SKIPNO[help]=true
+  OPTIONS_BOOLEANS_SKIPNO[use-default-options]=true
 }
 
 processCommandLine() {
@@ -127,11 +130,14 @@ processCommandLine() {
 
   echoInfo "processCommandLine:" "${@}"
 
-  # Search specifically for --log=N because we might want logging of command line processing itself
+  # Search specifically for a few things because we might want to change/log command line processing itself
   for arg; do
     case "$arg" in
       --log=*)
         OPTIONS[log]=${arg#--log=}
+        ;;
+      --use-default-options)
+        setDefaultFlags
         ;;
     esac
   done
