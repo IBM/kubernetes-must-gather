@@ -12,6 +12,11 @@ source "${SCRIPT_DIR}/utilities/cmdline.sh"
 run() {
   startRun
   setDefaultFlags
+  OPTIONS[logs-crashloopbackoff]=true
+  OPTIONS[resources-nodes-allnamespaces]=true
+  OPTIONS[resources-pods-allnamespaces]=true
+  OPTIONS[resources-events-allnamespaces]=true
+  OPTIONS[resources-securitycontextconstraints-allnamespaces]=true
   processCommandLine "${@}"
   defaultProcessing
   endRun
