@@ -123,14 +123,15 @@ We generally recommend using a specific tag rather than `latest` because `oc adm
    ```
    podman manifest push --all quay.io/ibm/kubernetes-must-gather:latest docker://quay.io/ibm/kubernetes-must-gather:latest
    ```
-1. Test the `latest` tag:
+1. Test the Quay image:
    ```
-   oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest
+   oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:$VERSION
    ```
 1. If everything looks good
     1. Add and push a tag:
        ```
        git tag $VERSION
+       git push --tags
        ```
     2. Then find this new tag in [the tag list](https://github.com/IBM/kubernetes-must-gather/tags), click the ellipses, click Create release, and then create a new release.
 
