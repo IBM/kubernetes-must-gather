@@ -18,13 +18,21 @@ For available options, run with `--usage`:
 oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- gather --usage
 ```
 
+---
+
 ### gather script
+
+The `gather` script collects information for common problems in the control planes.
 
 #### Default collection
 
 1. `ClusterVersion` related resources
 
+---
+
 ### healthcheck script
+
+The `healthcheck` script collects information for common problems in both the control and application planes.
 
 #### Usage help
 
@@ -36,6 +44,8 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- healthch
 
 1. `oc describe` YAMLs for all namespaces for the following resources: `nodes pods events securitycontextconstraints`
 1. Pod logs of pods in CrashLoopBackOff state for all namespaces. Disable with `--no-logs-crashloopbackoff`
+
+---
 
 ### Common flags
 
