@@ -1,35 +1,47 @@
 # kubernetes-must-gather
 
-`kubernetes-must-gather` is a custom must-gather image and collection script for Kubernetes and OpenShift. It should work on AMD/x64, ARM/AARCH, PPC64, and z/Linux. The image is published to Red Hat's Quay.io at [quay.io/ibm/kubernetes-must-gather](https://quay.io/repository/ibm/kubernetes-must-gather). The image is based on the [`oc adm must-gather` image](https://github.com/openshift/must-gather).
+`kubernetes-must-gather` is a custom must-gather image for Kubernetes and OpenShift. It should work on AMD/x64, ARM/AARCH, PPC64, and z/Linux. The image is published to Red Hat's Quay.io at [quay.io/ibm/kubernetes-must-gather](https://quay.io/repository/ibm/kubernetes-must-gather). The image is based on the [`oc adm must-gather` image](https://github.com/openshift/must-gather).
 
 ## Usage
 
 ### Basic usage
 
+By default, `kubernetes-must-gather` executes the `gather` script that retrieves significantly less than the default `oc adm must-gather` image because `kubernetes-must-gather` is designed for a more lightweight and iterative workflow using command line flags.
+
 ```
 oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest
 ```
 
-### Customized usage
+For available options, run with `--usage`:
 
-#### Default Behavior
+```
+oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- gather --usage
+```
 
-`kubernetes-must-gather` gathers significantly less than the default `oc adm must-gather` image because `kubernetes-must-gather` is designed for a more lightweight and iterative workflow using command line flags. By default, `kubernetes-must-gather` gathers:
+### gather script
 
-1. `oc describe` YAMLs for all namespaces for the following resources: `nodes pods events securitycontextconstraints`
-1. Pod logs of pods in CrashLoopBackOff state for all namespaces. Disable with `--no-logs-crashloopbackoff`
+#### Default collection
+
+1. `ClusterVersion` related resources
+
+### healthcheck script
 
 #### Usage help
 
 ```
-oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- gather -h
+oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- healthcheck -h
 ```
 
-#### Common flags
+#### Default collection
 
+1. `oc describe` YAMLs for all namespaces for the following resources: `nodes pods events securitycontextconstraints`
+1. Pod logs of pods in CrashLoopBackOff state for all namespaces. Disable with `--no-logs-crashloopbackoff`
+
+### Common flags
+
+* Enable verbose logging: `--log=2`
 * Gather `etcd` pod logs: `--logs-etcd`
 * Disable gathering CrashLoopBackOff pod logs: `--no-logs-crashloopbackoff`
-* Enable verbose logging: `--log=2`
 
 #### oc adm must-gather collection-scripts
 
@@ -41,7 +53,7 @@ For example, to run [`gather_apirequestcounts`](https://github.com/openshift/mus
 oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- gather --gather_apirequestcounts
 ```
 
-Extra output is in the download at `must-gather.local.*/quay-io-ibm-kubernetes-must-gather*/requests/`
+Extra output is in the download at `must-gather.*/*kubernetes-must-gather*/requests/`
 
 ## Notes
 
