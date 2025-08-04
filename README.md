@@ -22,7 +22,7 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- gather -
 
 ### gather script
 
-The `gather` script collects information for common problems in the control planes.
+The `gather` script collects information for common problems in the control plane.
 
 #### Default collection
 
@@ -65,7 +65,7 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- gather -
 
 Extra output is in the download at `must-gather.*/*kubernetes-must-gather*/requests/`
 
-## Notes
+### Notes
 
 We generally recommend using a specific tag rather than `latest` because `oc adm must-gather` [uses an `ImagePullPolicy` of `PullIfNotPresent`](https://github.com/openshift/oc/issues/2029) so if you were to use `--image=quay.io/ibm/kubernetes-must-gather:latest` once, then you could not get a newer version of the `latest` image in the same cluster unless you manually deleted that image from the internal image registry. Consult the tag in the release name of the [latest release](https://github.com/IBM/kubernetes-must-gather/releases/latest) (e.g. 0.1.20250715013 in the URL) to use a specific version.
 
