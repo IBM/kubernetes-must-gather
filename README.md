@@ -18,6 +18,12 @@ For available options, run with `--usage`:
 oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- gather --usage
 ```
 
+For an alternative "health check" collection, run:
+
+```
+oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- healthcheck
+```
+
 ---
 
 ### gather script
