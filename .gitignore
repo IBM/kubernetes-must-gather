@@ -3,4 +3,4 @@ test.sh
 buildPush*.sh
 localBuild.sh
 quayBuild.sh
-
+/testcollectors
