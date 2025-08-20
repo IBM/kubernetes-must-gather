@@ -95,7 +95,7 @@ ensureAllPodsJSON() {
 
     ALL_PODS_JSON="$(oc get pods -A -o json)"
 
-    echoInfo "Finsished gathering all pods JSON. Lines: $(echo "${ALL_PODS_JSON}" | wc -l)"
+    echoInfo "Finished gathering all pods JSON. Lines: $(echo "${ALL_PODS_JSON}" | wc -l)"
 
     # This is too heavy and causes issues with oc
     echoLargeVerbose "ALL_PODS_JSON = ${ALL_PODS_JSON}"
