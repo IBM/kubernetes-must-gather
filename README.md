@@ -58,6 +58,7 @@ oc adm must-gather --image=quay.io/ibm/kubernetes-must-gather:latest -- healthch
 * Enable verbose logging: `--log=2`
 * Gather `etcd` pod logs: `--logs-etcd`
 * Disable gathering CrashLoopBackOff pod logs: `--no-logs-crashloopbackoff`
+* Gather the entire base OCP MustGather in addition to the health check: `--all-ocp-mustgather`
 
 #### oc adm must-gather collection-scripts
 
