@@ -1,6 +1,4 @@
 must-gather.local.*
 test.sh
 buildPush*.sh
-localBuild.sh
-quayBuild.sh
 /testcollectors
