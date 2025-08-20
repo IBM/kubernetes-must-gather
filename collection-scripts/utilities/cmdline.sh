@@ -57,6 +57,7 @@ setDefaultFlags() {
   OPTIONS[osus]=false
   OPTIONS[aro]=false
   OPTIONS[use-default-options]=false
+  OPTIONS[all-ocp-mustgather]=false
 
   ## Descriptions should always start with 'Enable '
   OPTIONS_BOOLEANS_DESCRIPTIONS[logs-crashloopbackoff]="Enable gathering pod logs of pods in CrashLoopBackOff state"
@@ -103,6 +104,7 @@ setDefaultFlags() {
   OPTIONS_BOOLEANS_DESCRIPTIONS[osus]="Enable gathering osus resources"
   OPTIONS_BOOLEANS_DESCRIPTIONS[aro]="Enable gathering ARO resources"
   OPTIONS_BOOLEANS_DESCRIPTIONS[use-default-options]="Enable resetting overridden script options"
+  OPTIONS_BOOLEANS_DESCRIPTIONS[all-ocp-mustgather]="Enable gathering everything in the base OCP MustGather: https://github.com/openshift/must-gather/blob/main/collection-scripts/gather"
 
   # Optional short-hand flags for options
   OPTIONS_SHORTFLAGS[help]=h
@@ -361,4 +363,23 @@ printFinalOptions() {
   for OPTION in "${!OPTIONS[@]}"; do
     echo "  --${OPTION} = ${OPTIONS[${OPTION}]}"
   done
+}
+
+isOptionSet() {
+  OPTION=$1
+  OPTION_TYPE=$2
+  if [[ "${OPTION_TYPE}" = "" ]]; then
+    OPTION_TYPE=${OPTION_TYPE_GENERIC}
+  fi
+  echoVerbose3 "isOptionSet entry ${OPTION} (${OPTION_TYPE})"
+  if [[ ${OPTIONS[${OPTION}]} = true ]]; then
+    echoVerbose3 "isOptionSet exit true (direct option)"
+    return 0
+  elif [[ "${OPTION_TYPE}" = "${OPTION_TYPE_OCP_GATHER}" ]] && [[ ${OPTIONS[all-ocp-mustgather]} = true ]]; then
+    echoVerbose3 "isOptionSet exit true (--all-ocp-mustgather)"
+    return 0
+  else
+    echoVerbose3 "isOptionSet exit false"
+    return 1
+  fi
 }

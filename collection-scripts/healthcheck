@@ -5,7 +5,7 @@
 SCRIPT_DIR="$(dirname "${0}")"
 SCRIPT_NAME="$(basename "${0}")"
 
-source "${SCRIPT_DIR}/utilities/version.sh"
+source "${SCRIPT_DIR}/utilities/constants.sh"
 source "${SCRIPT_DIR}/utilities/utilities.sh"
 source "${SCRIPT_DIR}/utilities/cmdline.sh"
 

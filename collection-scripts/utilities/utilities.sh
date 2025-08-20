@@ -166,7 +166,7 @@ defaultProcessing() {
 
   echoInfo "Started defaultProcessing"
 
-  if [[ ${OPTIONS[all-pods-json]} = true ]]; then
+  if isOptionSet all-pods-json; then
     ensureAllPodsJSON
   fi
 
@@ -179,83 +179,83 @@ defaultProcessing() {
   # Resources to gather with `--all-namespaces` option
   all_ns_resources=()
   
-  if [[ ${OPTIONS[resources-nodes-allnamespaces]} = true ]]; then
+  if isOptionSet resources-nodes-allnamespaces; then
     all_ns_resources+=(nodes)
   fi
-  if [[ ${OPTIONS[resources-pods-allnamespaces]} = true ]]; then
+  if isOptionSet resources-pods-allnamespaces; then
     all_ns_resources+=(pods)
   fi
-  if [[ ${OPTIONS[resources-events-allnamespaces]} = true ]]; then
+  if isOptionSet resources-events-allnamespaces; then
     all_ns_resources+=(events)
   fi
-  if [[ ${OPTIONS[resources-securitycontextconstraints-allnamespaces]} = true ]]; then
+  if isOptionSet resources-securitycontextconstraints-allnamespaces; then
     all_ns_resources+=(securitycontextconstraints)
   fi
 
   # Cluster Version Information
-  if [[ ${OPTIONS[cluster-version-resources]} = true ]]; then
+  if isOptionSet cluster-version-resources ${OPTION_TYPE_OCP_GATHER}; then
     named_resources+=(ns/openshift-cluster-version)
     group_resources+=(clusterversion)
   fi
 
   # Operator and APIService Resources
-  if [[ ${OPTIONS[operator-apiservice-resources]} = true ]]; then
+  if isOptionSet operator-apiservice-resources ${OPTION_TYPE_OCP_GATHER}; then
     group_resources+=(clusteroperators apiservices)
   fi
 
   # Certificate Resources
-  if [[ ${OPTIONS[certificate-resources]} = true ]]; then
+  if isOptionSet certificate-resources ${OPTION_TYPE_OCP_GATHER}; then
     group_resources+=(certificatesigningrequests)
   fi
 
   # Machine/Node Resources
-  if [[ ${OPTIONS[node-resources]} = true ]]; then
+  if isOptionSet node-resources ${OPTION_TYPE_OCP_GATHER}; then
     group_resources+=(nodes)
   fi
 
   # Namespaces/Project Resources
-  if [[ ${OPTIONS[namespace-resources]} = true ]]; then
+  if isOptionSet namespace-resources ${OPTION_TYPE_OCP_GATHER}; then
     named_resources+=(ns/default ns/openshift ns/kube-system ns/openshift-etcd)
   fi
 
   # Storage Resources
-  if [[ ${OPTIONS[storage-resources]} = true ]]; then
+  if isOptionSet storage-resources ${OPTION_TYPE_OCP_GATHER}; then
     group_resources+=(storageclasses persistentvolumes volumeattachments csidrivers csinodes volumesnapshotclasses volumesnapshotcontents clustercsidrivers)
     all_ns_resources+=(csistoragecapacities)
   fi
 
   # Image-source Resources
-  if [[ ${OPTIONS[image-source-resources]} = true ]]; then
+  if isOptionSet image-source-resources ${OPTION_TYPE_OCP_GATHER}; then
     group_resources+=(imagecontentsourcepolicies.operator.openshift.io)
   fi
 
   # Networking Resources
-  if [[ ${OPTIONS[networking-resources]} = true ]]; then
+  if isOptionSet networking-resources ${OPTION_TYPE_OCP_GATHER}; then
     group_resources+=(networks.operator.openshift.io)
   fi
 
   # NodeNetworkState
-  if [[ ${OPTIONS[nodenetworkstates]} = true ]]; then
+  if isOptionSet nodenetworkstates ${OPTION_TYPE_OCP_GATHER}; then
     resources+=(nodenetworkstates nodenetworkconfigurationenactments nodenetworkconfigurationpolicies)
   fi
 
   # Assisted Installer
-  if [[ ${OPTIONS[assisted-installer]} = true ]]; then
+  if isOptionSet assisted-installer ${OPTION_TYPE_OCP_GATHER}; then
     named_resources+=(ns/assisted-installer)
   fi
 
   # Leases
-  if [[ ${OPTIONS[leases]} = true ]]; then
+  if isOptionSet leases ${OPTION_TYPE_OCP_GATHER}; then
     all_ns_resources+=(leases)
   fi
 
   # Flowcontrol - API Priority and Fairness (APF)
-  if [[ ${OPTIONS[flowcontrol]} = true ]]; then
+  if isOptionSet flowcontrol ${OPTION_TYPE_OCP_GATHER}; then
     group_resources+=(prioritylevelconfigurations.flowcontrol.apiserver.k8s.io flowschemas.flowcontrol.apiserver.k8s.io)
   fi
 
   # ClusterResourceQuota
-  if [[ ${OPTIONS[clusterresourcequotas]} = true ]]; then
+  if isOptionSet clusterresourcequotas ${OPTION_TYPE_OCP_GATHER}; then
     group_resources+=(clusterresourcequotas.quota.openshift.io)
   fi
 
@@ -290,131 +290,131 @@ defaultProcessing() {
   fi
 
   # Gather Insights Operator Archives
-  if [[ ${OPTIONS[insights-operator]} = true ]]; then
+  if isOptionSet insights-operator ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_insights &
     queuedBackground $!
   fi
 
   # Gather monitoring data from the cluster
-  if [[ ${OPTIONS[monitoring-data]} = true ]]; then
+  if isOptionSet monitoring-data ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_monitoring &
     queuedBackground $!
   fi
 
   # Gather optional operator resources from all namespaces
-  if [[ ${OPTIONS[olm-resources]} = true ]]; then
+  if isOptionSet olm-resources ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_olm &
     queuedBackground $!
   fi
 
   # Gather API Priority and Fairness Endpoints
-  if [[ ${OPTIONS[api-priority-fairness]} = true ]]; then
+  if isOptionSet api-priority-fairness ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_priority_and_fairness &
     queuedBackground $!
   fi
 
   # Gather etcd information
-  if [[ ${OPTIONS[etcd]} = true ]]; then
+  if isOptionSet etcd ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_etcd &
     queuedBackground $!
   fi
 
   # Gather Service Logs (using a supplemental Script); Scoped to Masters.
-  if [[ ${OPTIONS[service-logs]} = true ]]; then
+  if isOptionSet service-logs ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_service_logs master &
     queuedBackground $!
   fi
 
   # Gather Windows Kubernetes component logs
-  if [[ ${OPTIONS[windows-node-logs]} = true ]]; then
+  if isOptionSet windows-node-logs ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_windows_node_logs &
     queuedBackground $!
   fi
 
   # Gather HAProxy config files
-  if [[ ${OPTIONS[haproxy-config]} = true ]]; then
+  if isOptionSet haproxy-config ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_haproxy_config &
     queuedBackground $!
   fi
 
   # Gather kas startup and termination logs
-  if [[ ${OPTIONS[kas-startup-termination]} = true ]]; then
+  if isOptionSet kas-startup-termination ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_kas_startup_termination_logs &
     queuedBackground $!
   fi
 
   # Gather network logs
-  if [[ ${OPTIONS[logs-network]} = true ]]; then
+  if isOptionSet logs-network ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_network_logs_basics &
     queuedBackground $!
   fi
 
   # Gather metallb logs
-  if [[ ${OPTIONS[logs-metallb]} = true ]]; then
+  if isOptionSet logs-metallb ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_metallb &
     queuedBackground $!
   fi
 
   # Gather frr-k8s logs
-  if [[ ${OPTIONS[logs-frr-k8s]} = true ]]; then
+  if isOptionSet logs-frr-k8s ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_frrk8s &
     queuedBackground $!
   fi
 
   # Gather NMState
-  if [[ ${OPTIONS[nmstate]} = true ]]; then
+  if isOptionSet nmstate ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_nmstate &
     queuedBackground $!
   fi
 
   # Gather SR-IOV resources
-  if [[ ${OPTIONS[sriov]} = true ]]; then
+  if isOptionSet sriov ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_sriov &
     queuedBackground $!
   fi
 
   # Gather PodNetworkConnectivityCheck
-  if [[ ${OPTIONS[podnetworkconnectivitycheck]} = true ]]; then
+  if isOptionSet podnetworkconnectivitycheck ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_podnetworkconnectivitycheck &
     queuedBackground $!
   fi
 
   # Gather On-Disk MachineConfig files
-  if [[ ${OPTIONS[machineconfig-ondisk]} = true ]]; then
+  if isOptionSet machineconfig-ondisk ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_machineconfig_ondisk &
     queuedBackground $!
   fi
 
   # Gather On-Disk MachineConfigDaemon logs
-  if [[ ${OPTIONS[logs-machineconfig-termination]} = true ]]; then
+  if isOptionSet logs-machineconfig-termination ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_machineconfigdaemon_termination_logs &
     queuedBackground $!
   fi
 
   # Gather vSphere resources. This is NOOP on non-vSphere platform.
-  if [[ ${OPTIONS[vsphere]} = true ]]; then
+  if isOptionSet vsphere ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_vsphere &
     queuedBackground $!
   fi
 
   # Gather Performance profile information
-  if [[ ${OPTIONS[performance-profile]} = true ]]; then
+  if isOptionSet performance-profile ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_ppc &
     queuedBackground $!
   fi
 
   # Gather OSUS information
-  if [[ ${OPTIONS[osus]} = true ]]; then
+  if isOptionSet osus ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_osus &
     queuedBackground $!
   fi
 
   # Gather ARO information
-  if [[ ${OPTIONS[aro]} = true ]]; then
+  if isOptionSet aro ${OPTION_TYPE_OCP_GATHER}; then
     /usr/bin/gather_aro
   fi
 
-  if [[ ${OPTIONS[logs-crashloopbackoff]} = true ]]; then
+  if isOptionSet logs-crashloopbackoff; then
     echoInfo "Started checking for CrashLoopBackOff pods"
     ensureAllPodsJSON
     INPUT="$(echo "${ALL_PODS_JSON}" | jq -r '.items[] | select(.status.containerStatuses[]?.state.waiting?.reason == "CrashLoopBackOff") | [.metadata.namespace, .metadata.name] | @tsv')"
@@ -427,7 +427,7 @@ defaultProcessing() {
     echoInfo "Finished checking for CrashLoopBackOff pods"
   fi
 
-  if [[ ${OPTIONS[logs-etcd]} = true ]]; then
+  if isOptionSet logs-etcd; then
     echoInfo "Started checking for etcd pod logs"
     getPodLogsByAppName "etcd"
     getPodLogsByAppName "etcd-operator"
@@ -441,7 +441,7 @@ defaultProcessing() {
     OTHER_SCRIPT_NAME="$(basename "${OTHER_SCRIPT}")"
     if [[ "${OTHER_SCRIPT_NAME}" != "${CURRENT_SCRIPT}" ]]; then
       echoVerbose3 "Other script ${OTHER_SCRIPT_NAME} = ${OPTIONS[${OTHER_SCRIPT_NAME}]}"
-      if [[ ${OPTIONS[${OTHER_SCRIPT_NAME}]} = true ]]; then
+      if isOptionSet ${OTHER_SCRIPT_NAME}; then
         echoInfo "Executing script ${OTHER_SCRIPT_NAME}"
         #export BASE_COLLECTION_PATH="${MGOUTPUT}"
         /bin/bash "${OTHER_SCRIPT}"
